@@ -398,27 +398,86 @@ button{cursor:pointer}
 </div>
 <div class="toast" id="toast"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const PASS="demain";
+const SUPABASE_URL="https://sebmujwmtnqmwpqlyqlj.supabase.co";
+const SUPABASE_KEY="sb_publishable_eG-3HAKL08CfD3lS8wNE8A_nK8Vvikc";
+const ADMIN_EMAIL="ydevin17@gmail.com";
+const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+
 const seed=[
-{id:"1",date:"2026-08-13",title:"La dernière rame",text:"Le métro ferma ses portes devant lui.\n\nDe l’autre côté de la vitre, elle souriait encore. Il leva la main. Elle aussi.\n\nPuis la rame disparut dans le tunnel.\n\nIl resta seul sur le quai, avec cette pensée absurde : après quarante-deux ans de mariage, ils venaient enfin de réussir leurs adieux.",published:true},
-{id:"2",date:"2026-08-12",title:"Le message",text:"À 23 h 58, son téléphone vibra.\n\n« Tu dors ? »\n\nIl regarda le prénom, hésita, puis retourna l’appareil sur la table.\n\nLe lendemain matin, il apprit qu’elle était morte à minuit.\n\nDepuis, il répond à tout le monde.",published:true},
-{id:"3",date:"2026-08-11",title:"La place vide",text:"Tous les dimanches, il dressait deux couverts.\n\nLa voisine avait fini par lui demander pourquoi.\n\nIl avait souri.\n\n— Parce qu’un jour elle reviendra.\n\nLa voisine n’avait pas osé lui rappeler qu’elle habitait désormais l’appartement d’en face.",published:true}
+{id:"demo-1",date:"2026-08-13",title:"La dernière rame",text:"Le métro ferma ses portes devant lui.\n\nDe l’autre côté de la vitre, elle souriait encore. Il leva la main. Elle aussi.\n\nPuis la rame disparut dans le tunnel.\n\nIl resta seul sur le quai, avec cette pensée absurde : après quarante-deux ans de mariage, ils venaient enfin de réussir leurs adieux.",published:true,persisted:false},
+{id:"demo-2",date:"2026-08-12",title:"Le message",text:"À 23 h 58, son téléphone vibra.\n\n« Tu dors ? »\n\nIl regarda le prénom, hésita, puis retourna l’appareil sur la table.\n\nLe lendemain matin, il apprit qu’elle était morte à minuit.\n\nDepuis, il répond à tout le monde.",published:true,persisted:false},
+{id:"demo-3",date:"2026-08-11",title:"La place vide",text:"Tous les dimanches, il dressait deux couverts.\n\nLa voisine avait fini par lui demander pourquoi.\n\nIl avait souri.\n\n— Parce qu’un jour elle reviendra.\n\nLa voisine n’avait pas osé lui rappeler qu’elle habitait désormais l’appartement d’en face.",published:true,persisted:false}
 ];
 
-let stories=JSON.parse(localStorage.getItem("micro_app_minimal_v2")||"null")||seed;
-let comments=JSON.parse(localStorage.getItem("micro_app_comments_v1")||"{}");
-let likes=JSON.parse(localStorage.getItem("micro_app_likes_v1")||"{}");
-let current=null, editing=null;
+let stories=[];
+let current=null;
+let editing=null;
+let adminSession=false;
+let likeState={count:0,liked:false};
 const $=id=>document.getElementById(id);
 
-function pubs(){return stories.filter(s=>s.published).sort((a,b)=>b.date.localeCompare(a.date))}
-function today(){const d=new Date().toISOString().slice(0,10);return pubs().find(s=>s.date===d)||pubs()[0]}
-function fdate(d){return new Intl.DateTimeFormat("fr-FR",{weekday:"long",day:"numeric",month:"long"}).format(new Date(d+"T12:00:00"))}
+function mapStory(row){
+  return {
+    id:String(row.id),
+    date:row.publication_date,
+    title:row.title,
+    text:row.content,
+    published:row.published,
+    persisted:true
+  };
+}
+
+function todayISO(){return new Date().toISOString().slice(0,10)}
+function pubs(){
+  const today=todayISO();
+  return stories
+    .filter(s=>s.published && s.date<=today)
+    .sort((a,b)=>b.date.localeCompare(a.date));
+}
+function today(){
+  const p=pubs();
+  return p.find(s=>s.date===todayISO())||p[0]||stories[0]||null;
+}
+function fdate(d){
+  return new Intl.DateTimeFormat("fr-FR",{weekday:"long",day:"numeric",month:"long"})
+    .format(new Date(d+"T12:00:00"));
+}
 function words(t){return (t.match(/\S+/g)||[]).length}
 
+async function loadStories(preferredId=null){
+  const {data,error}=await sb
+    .from("stories")
+    .select("id,title,content,publication_date,published")
+    .order("publication_date",{ascending:false});
+
+  if(error){
+    console.error(error);
+    if(!stories.length) stories=seed.slice();
+    show(current||today());
+    return false;
+  }
+
+  stories=(data||[]).map(mapStory);
+  if(!stories.length) stories=seed.slice();
+
+  let next=preferredId ? stories.find(s=>String(s.id)===String(preferredId)) : null;
+  if(!next && current) next=stories.find(s=>String(s.id)===String(current.id));
+  show(next||today());
+  return true;
+}
+
 function show(s){
-  if(!s)return;
+  if(!s){
+    $("date").textContent="";
+    $("title").textContent="Aucune histoire";
+    $("text").innerHTML="<p>La prochaine micro-fiction apparaîtra ici.</p>";
+    $("meta").textContent="";
+    $("commentsCount").textContent="";
+    $("commentsList").innerHTML="";
+    return;
+  }
   current=s;
   $("date").textContent=fdate(s.date);
   $("title").textContent=s.title;
@@ -431,58 +490,135 @@ function show(s){
   renderLike();
 }
 
-
-
-function renderLike(){
-  if(!current)return;
-  const data=likes[current.id]||{count:0,liked:false};
-  $("likeButton").classList.toggle("liked",!!data.liked);
-  $("likeCount").textContent=data.count ? `${data.count}` : "";
-}
-function toggleLike(){
-  if(!current)return;
-  const data=likes[current.id]||{count:0,liked:false};
-  if(data.liked){
-    data.liked=false;
-    data.count=Math.max(0,data.count-1);
-  }else{
-    data.liked=true;
-    data.count+=1;
+function visitorId(){
+  let id=localStorage.getItem("chute_visitor_id");
+  if(!id){
+    id=crypto.randomUUID ? crypto.randomUUID() : "v-"+Date.now()+"-"+Math.random().toString(36).slice(2);
+    localStorage.setItem("chute_visitor_id",id);
   }
-  likes[current.id]=data;
-  localStorage.setItem("micro_app_likes_v1",JSON.stringify(likes));
-  renderLike();
+  return id;
+}
+
+async function renderLike(){
+  if(!current || !current.persisted){
+    likeState={count:0,liked:false};
+    $("likeButton").classList.remove("liked");
+    $("likeCount").textContent="";
+    return;
+  }
+
+  const vid=visitorId();
+  const [countRes,mineRes]=await Promise.all([
+    sb.from("likes").select("id",{count:"exact",head:true}).eq("story_id",Number(current.id)),
+    sb.from("likes").select("id").eq("story_id",Number(current.id)).eq("visitor_id",vid).maybeSingle()
+  ]);
+
+  if(countRes.error) console.error(countRes.error);
+  if(mineRes.error) console.error(mineRes.error);
+
+  likeState={
+    count:countRes.count||0,
+    liked:!!mineRes.data
+  };
+  $("likeButton").classList.toggle("liked",likeState.liked);
+  $("likeCount").textContent=likeState.count ? String(likeState.count) : "";
+}
+
+async function toggleLike(){
+  if(!current)return;
+  if(!current.persisted){
+    toast("Connecte-toi une première fois en Auteur");
+    return;
+  }
+
+  const vid=visitorId();
+  let error;
+
+  if(likeState.liked){
+    ({error}=await sb
+      .from("likes")
+      .delete()
+      .eq("story_id",Number(current.id))
+      .eq("visitor_id",vid));
+  }else{
+    ({error}=await sb
+      .from("likes")
+      .insert({story_id:Number(current.id),visitor_id:vid}));
+  }
+
+  if(error){
+    console.error(error);
+    toast("Impossible d’enregistrer le vote");
+    return;
+  }
+  await renderLike();
 }
 
 function commentDate(iso){
-  const d=new Date(iso);
-  return new Intl.DateTimeFormat("fr-FR",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}).format(d);
+  return new Intl.DateTimeFormat("fr-FR",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})
+    .format(new Date(iso));
 }
-function renderComments(){
+
+async function renderComments(){
   if(!current)return;
-  const list=comments[current.id]||[];
+  if(!current.persisted){
+    $("commentsCount").textContent="";
+    $("commentsList").innerHTML=`<div class="comments-empty">Les commentaires seront disponibles après la première connexion Auteur.</div>`;
+    return;
+  }
+
+  $("commentsList").innerHTML=`<div class="comments-empty">Chargement…</div>`;
+  const {data,error}=await sb
+    .from("comments")
+    .select("id,author,content,created_at")
+    .eq("story_id",Number(current.id))
+    .order("created_at",{ascending:false});
+
+  if(error){
+    console.error(error);
+    $("commentsList").innerHTML=`<div class="comments-empty">Impossible de charger les commentaires.</div>`;
+    return;
+  }
+
+  const list=data||[];
   $("commentsCount").textContent=list.length ? `${list.length} ${list.length>1?"commentaires":"commentaire"}` : "";
   $("commentsList").innerHTML=list.length
-    ? list.slice().reverse().map(c=>`
+    ? list.map(c=>`
       <div class="comment">
         <div class="comment-top">
-          <div class="comment-author">${escapeHtml(c.name)}</div>
-          <div class="comment-date">${commentDate(c.date)}</div>
+          <div class="comment-author">${escapeHtml(c.author)}</div>
+          <div class="comment-date">${commentDate(c.created_at)}</div>
         </div>
-        <div class="comment-text">${escapeHtml(c.text)}</div>
+        <div class="comment-text">${escapeHtml(c.content)}</div>
       </div>`).join("")
     : `<div class="comments-empty">Soyez le premier à commenter.</div>`;
 }
-function addComment(){
+
+async function addComment(){
   if(!current)return;
+  if(!current.persisted){
+    toast("Connecte-toi une première fois en Auteur");
+    return;
+  }
+
   const name=($("commentName").value||"").trim();
   const text=($("commentText").value||"").trim();
   if(!name||!text){toast("Indique un nom et un commentaire");return}
-  if(!comments[current.id])comments[current.id]=[];
-  comments[current.id].push({name,text,date:new Date().toISOString()});
-  localStorage.setItem("micro_app_comments_v1",JSON.stringify(comments));
+
+  const {error}=await sb.from("comments").insert({
+    story_id:Number(current.id),
+    author:name,
+    content:text
+  });
+
+  if(error){
+    console.error(error);
+    toast("Commentaire non publié");
+    return;
+  }
+
   $("commentText").value="";
-  renderComments();
+  await renderComments();
   toast("Commentaire publié");
 }
 
@@ -492,9 +628,12 @@ function active(b){
 }
 
 function showToday(b){active(b);closeSheet(false);show(today())}
-function showRandom(){let p=pubs();if(p.length)show(p[Math.floor(Math.random()*p.length)])}
+function showRandom(){
+  const p=pubs();
+  if(p.length)show(p[Math.floor(Math.random()*p.length)]);
+}
 
-function openSheet(title, content){
+function openSheet(title,content){
   $("sheetTitle").textContent=title;
   $("sheetContent").innerHTML=content;
   requestAnimationFrame(()=>$("sheet").classList.add("open"));
@@ -519,6 +658,7 @@ function renderArchive(q){
   const list=query
     ? pubs().filter(s=>(s.title+" "+s.text).toLowerCase().includes(query))
     : pubs();
+
   $("archiveResults").innerHTML=list.length
     ? list.map(s=>`
       <div class="item">
@@ -531,42 +671,122 @@ function renderArchive(q){
     : `<p class="note">Aucun résultat.</p>`;
 }
 
-function selectStory(id){show(stories.find(s=>s.id===id));closeSheet()}
+function selectStory(id){
+  show(stories.find(s=>String(s.id)===String(id)));
+  closeSheet();
+}
 
-function openAdmin(b){
+async function openAdmin(b){
   if(b)active(b);
+
+  const {data}=await sb.auth.getSession();
+  if(data.session){
+    adminSession=true;
+    await ensureInitialStories();
+    admin();
+    return;
+  }
+
   openSheet("Auteur",`
     <div class="admin">
-      <p class="note">Code administrateur : <b>demain</b></p>
       <label>Mot de passe</label>
-      <input id="pw" type="password">
+      <input id="pw" type="password" autocomplete="current-password" onkeydown="if(event.key==='Enter')login()">
       <button class="primary" onclick="login()">Continuer</button>
+      <p class="note">Accès réservé à l’auteur.</p>
     </div>`);
 }
 
-function login(){if($("pw").value!==PASS){toast("Mot de passe incorrect");return}admin()}
+async function login(){
+  const password=($("pw").value||"").trim();
+  if(!password){toast("Entre ton mot de passe");return}
+
+  const {error}=await sb.auth.signInWithPassword({
+    email:ADMIN_EMAIL,
+    password
+  });
+
+  if(error){
+    console.error(error);
+    toast("Mot de passe incorrect");
+    return;
+  }
+
+  adminSession=true;
+  await ensureInitialStories();
+  await loadStories();
+  admin();
+  toast("Connecté");
+}
+
+async function ensureInitialStories(){
+  const {data,error}=await sb.from("stories").select("id").limit(1);
+  if(error){
+    console.error(error);
+    return;
+  }
+  if(data && data.length)return;
+
+  const payload=seed.map(s=>({
+    title:s.title,
+    content:s.text,
+    publication_date:s.date,
+    published:true
+  }));
+
+  const {error:insertError}=await sb.from("stories").insert(payload);
+  if(insertError) console.error(insertError);
+}
+
 function admin(){
   editing=null;
   $("sheetTitle").textContent="Administration";
   $("sheetContent").innerHTML=`<div class="admin">
-    <label>Date</label><input id="fd" type="date" value="${new Date().toISOString().slice(0,10)}">
+    <label>Date</label><input id="fd" type="date" value="${todayISO()}">
     <label>Titre</label><input id="ft">
     <label>Micro-fiction</label><textarea id="fx"></textarea>
-    <button class="primary" id="saveButton" onclick="saveStory()">Publier</button>
-    <p class="note">Prototype local : les textes sont conservés dans ce navigateur uniquement.</p>
+    <button class="primary" onclick="saveStory()">Publier</button>
+    <button class="secondary" onclick="logoutAdmin()">Se déconnecter</button>
+    <p class="note">Une date future programme automatiquement la publication.</p>
     <div style="height:1px;background:var(--line);margin:22px 0 8px"></div>
     <div style="font-size:13px;font-weight:700;margin:0 0 4px">Publications</div>
     <div id="adminPublications"></div>
   </div>`;
   renderAdminPublications();
 }
-function saveStory(){
-  let o={id:editing||String(Date.now()),date:$("fd").value,title:$("ft").value.trim(),text:$("fx").value.trim(),published:true};
-  if(!o.date||!o.title||!o.text){toast("Complète les trois champs");return}
-  stories=editing?stories.map(s=>s.id===editing?o:s):[...stories,o];
-  localStorage.setItem("micro_app_minimal_v2",JSON.stringify(stories));
-  show(today());
+
+async function saveStory(){
+  const date=$("fd").value;
+  const title=$("ft").value.trim();
+  const text=$("fx").value.trim();
+  if(!date||!title||!text){toast("Complète les trois champs");return}
+
+  let error;
+  let savedId=editing;
+
+  if(editing){
+    ({error}=await sb
+      .from("stories")
+      .update({title,content:text,publication_date:date,published:true})
+      .eq("id",Number(editing)));
+  }else{
+    const result=await sb
+      .from("stories")
+      .insert({title,content:text,publication_date:date,published:true})
+      .select("id")
+      .single();
+    error=result.error;
+    if(result.data)savedId=String(result.data.id);
+  }
+
+  if(error){
+    console.error(error);
+    toast("Enregistrement impossible");
+    return;
+  }
+
   const wasEditing=!!editing;
+  editing=null;
+  await loadStories(savedId);
   admin();
   toast(wasEditing?"Modifications enregistrées":"Publié");
 }
@@ -574,7 +794,9 @@ function saveStory(){
 function renderAdminPublications(){
   const box=$("adminPublications");
   if(!box)return;
+
   box.innerHTML=stories
+    .filter(s=>s.persisted)
     .slice()
     .sort((a,b)=>b.date.localeCompare(a.date))
     .map(s=>`
@@ -585,26 +807,13 @@ function renderAdminPublications(){
           <button class="secondary" style="width:auto;margin:0;padding:8px 11px" onclick="edit('${s.id}')">Modifier</button>
           <button class="secondary" style="width:auto;margin:0;padding:8px 11px" onclick="del('${s.id}')">Supprimer</button>
         </div>
-      </div>
-    `).join("") || `<p class="note">Aucune publication.</p>`;
+      </div>`).join("") || `<p class="note">Aucune publication.</p>`;
 }
 
-function manage(){
-  $("sheetTitle").textContent="Publications";
-  $("sheetContent").innerHTML=stories.sort((a,b)=>b.date.localeCompare(a.date)).map(s=>`
-    <div class="item">
-      <div class="d">${fdate(s.date)}</div>
-      <div class="t">${escapeHtml(s.title)}</div>
-      <div style="display:flex;gap:14px;margin-top:8px">
-        <button class="link" onclick="edit('${s.id}')">Modifier</button>
-        <button class="link" onclick="del('${s.id}')">Supprimer</button>
-      </div>
-    </div>`).join("");
-}
 function edit(id){
-  const s=stories.find(x=>x.id===id);
+  const s=stories.find(x=>String(x.id)===String(id));
   if(!s)return;
-  editing=id;
+  editing=String(id);
   $("sheetTitle").textContent="Modifier";
   $("sheetContent").innerHTML=`<div class="admin">
     <label>Date</label><input id="fd" type="date" value="${s.date}">
@@ -614,14 +823,27 @@ function edit(id){
     <button class="secondary" onclick="admin()">Annuler</button>
   </div>`;
 }
-function del(id){
-  if(confirm("Supprimer cette histoire ?")){
-    stories=stories.filter(s=>s.id!==id);
-    localStorage.setItem("micro_app_minimal_v2",JSON.stringify(stories));
-    show(today());
-    admin();
-    toast("Nouvelle supprimée");
+
+async function del(id){
+  if(!confirm("Supprimer cette histoire ?"))return;
+
+  const {error}=await sb.from("stories").delete().eq("id",Number(id));
+  if(error){
+    console.error(error);
+    toast("Suppression impossible");
+    return;
   }
+
+  await loadStories();
+  admin();
+  toast("Nouvelle supprimée");
+}
+
+async function logoutAdmin(){
+  await sb.auth.signOut();
+  adminSession=false;
+  closeSheet();
+  toast("Déconnecté");
 }
 
 function closeSheet(resetTab=true){
@@ -633,16 +855,34 @@ function closeSheet(resetTab=true){
     }
   },260);
 }
+
 function backdrop(e){if(e.target.id==="sheet")closeSheet()}
-function toast(t){$("toast").textContent=t;$("toast").classList.add("show");setTimeout(()=>$("toast").classList.remove("show"),1400)}
-function escapeHtml(v){let d=document.createElement("div");d.textContent=v||"";return d.innerHTML}
+function toast(t){
+  $("toast").textContent=t;
+  $("toast").classList.add("show");
+  setTimeout(()=>$("toast").classList.remove("show"),1700);
+}
+function escapeHtml(v){
+  const d=document.createElement("div");
+  d.textContent=v||"";
+  return d.innerHTML;
+}
 function escapeAttr(v){return escapeHtml(v).replace(/"/g,"&quot;")}
+
 async function shareCurrent(){
   if(!current)return;
-  if(navigator.share){await navigator.share({title:current.title,text:current.text})}
-  else{navigator.clipboard?.writeText(current.text);toast("Texte copié")}
+  if(navigator.share){
+    await navigator.share({title:current.title,text:current.text,url:location.href});
+  }else{
+    navigator.clipboard?.writeText(location.href);
+    toast("Lien copié");
+  }
 }
-show(today());
+
+async function init(){
+  await loadStories();
+}
+init();
 </script>
 </body>
 </html>
