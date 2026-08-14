@@ -511,12 +511,15 @@ svg { display:block; width:100%; height:100%; fill:currentColor; }
 /* EXACTEMENT la même taille en aperçu et en lecture. */
 .story-body-single{
   font-size:16.5px;
-  line-height:1.12;
+  line-height:1.40;
   letter-spacing:-.24px;
 }
 
 .story-body-single p{
-  margin:0 0 10px;
+  margin:0 0 14px;
+}
+.story-body-single p:last-child{
+  margin-bottom:0;
 }
 
 .story-card:not(.expanded) .story-body-single{
@@ -649,7 +652,7 @@ svg { display:block; width:100%; height:100%; fill:currentColor; }
 /* La fiche démarre plus bas qu'en V4 : plus d'air sous chut.e ! */
 .preview{
   font-size:16.5px !important;
-  line-height:1.12 !important;
+  line-height:1.40 !important;
 }
 
 /* Cartes arrière légèrement différenciées. */
@@ -1006,6 +1009,24 @@ svg { display:block; width:100%; height:100%; fill:currentColor; }
 }
 
 
+/* V6.4 — administration : suppression dans la liste + réinitialisation de l’éditeur */
+.admin-story-row-wrap{position:relative;display:block;}
+.admin-story-row-main{width:100%;padding-right:64px !important;}
+.admin-story-remove{
+  position:absolute;right:9px;top:50%;transform:translateY(-50%);
+  width:38px;height:38px;border:0;border-radius:50%;background:rgba(0,0,0,.07);
+  display:grid;place-items:center;font-size:23px;line-height:1;font-weight:500;cursor:pointer;z-index:3;
+}
+.admin-story-remove:active{transform:translateY(-50%) scale(.94);}
+.admin-editor-actions{display:flex;align-items:center;gap:10px;width:100%;}
+.admin-save-wide{flex:1 1 75%;width:auto !important;margin:0 !important;}
+.admin-reset-btn{
+  flex:0 0 48px;width:48px;height:48px;border:0;border-radius:50%;background:#e8e8e8;color:#111;
+  padding:12px;display:none;place-items:center;cursor:pointer;
+}
+.admin-reset-btn svg{width:100%;height:100%;display:block;}
+.admin-reset-btn:active{transform:scale(.94);}
+
 .search-btn{
   position:absolute;
   right:22px;
@@ -1241,7 +1262,12 @@ svg { display:block; width:100%; height:100%; fill:currentColor; }
     <input id="adminDateInput" type="date" style="width:100%;height:46px;border:1px solid #ddd;border-radius:18px;padding:0 14px;font:inherit;margin-bottom:10px;">
     <input id="adminTitleInput" type="text" placeholder="Titre" style="width:100%;height:46px;border:1px solid #ddd;border-radius:18px;padding:0 14px;font:inherit;margin-bottom:10px;">
     <textarea id="adminBodyInput" class="comment-box" style="min-height:220px" placeholder="Texte de la nouvelle"></textarea>
-    <button class="primary" id="adminSaveStory">Enregistrer</button>
+    <div class="admin-editor-actions">
+      <button class="primary admin-save-wide" id="adminSaveStory">Enregistrer</button>
+      <button class="admin-reset-btn" id="adminResetStory" type="button" aria-label="Réinitialiser les modifications" title="Réinitialiser">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.7 8.2A8 8 0 1 1 4 15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M4.7 8.2V3.8M4.7 8.2h4.4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </div>
   </div>
 </div>
 
@@ -1280,6 +1306,17 @@ svg { display:block; width:100%; height:100%; fill:currentColor; }
   </div>
 </div>
 
+<div class="modal confirm-modal" id="deleteStoryModal">
+  <div class="modal-panel">
+    <div class="modal-head"><h2>Supprimer cette nouvelle ?</h2></div>
+    <p class="confirm-copy" id="deleteStoryText">Cette nouvelle sera définitivement supprimée de la base de données.</p>
+    <div class="confirm-actions">
+      <button class="confirm-cancel" id="cancelDeleteStory">Annuler</button>
+      <button class="confirm-delete" id="confirmDeleteStory">Supprimer</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -1300,6 +1337,8 @@ let suppressClick = false;
 let storyReturnTarget = "home";
 let pendingLibraryRemoval = null;
 let editingStoryId = null;
+let editingStoryOriginal = null;
+let deleteStorySource = "editor";
 let commentsSupportReplies = true;
 
 const deck = document.getElementById("deck");
@@ -1360,6 +1399,18 @@ function getDisplayedLikes(storyOrIndex){
 }
 function updateCount(){ countEl.textContent=savedIds.size; }
 
+function splitStoryParagraphs(value){
+  const normalized = String(value || "")
+    .replace(/\r\n?/g, "\n")
+    .replace(/[\u2028\u2029]/g, "\n")
+    .replace(/\\n/g, "\n");
+
+  return normalized
+    .split(/\n+/)
+    .map(p => p.trim())
+    .filter(Boolean);
+}
+
 function mapStory(row){
   const text = row.content || "";
   const words = countWords(text);
@@ -1369,7 +1420,7 @@ function mapStory(row){
     title:row.title || "Sans titre",
     text,
     published:!!row.published,
-    body:text.split(/\n\s*\n/).filter(Boolean),
+    body:splitStoryParagraphs(text),
     words,
     minutes:estimateMinutes(words)
   };
@@ -2048,21 +2099,35 @@ async function renderAdminStories(){
   const box=document.getElementById("adminStoriesList");
   const all=await loadAllStoriesAdmin();
   box.innerHTML=all.map(s=>`
-    <button class="lib-row" data-edit-story="${s.id}">
-      <strong>${escapeHTML(s.title)}</strong>
-      <small>${s.date||""} · ${s.words} mots · ${s.minutes} min</small>
-    </button>`).join("") || `<div class="empty">Aucune nouvelle.</div>`;
+    <div class="admin-story-row-wrap">
+      <button class="lib-row admin-story-row-main" data-edit-story="${s.id}">
+        <strong>${escapeHTML(s.title)}</strong>
+        <small>${s.date||""} · ${s.words} mots · ${s.minutes} min</small>
+      </button>
+      <button class="admin-story-remove" data-delete-story-list="${s.id}" data-delete-story-title="${escapeHTML(s.title)}" aria-label="Supprimer ${escapeHTML(s.title)}">×</button>
+    </div>`).join("") || `<div class="empty">Aucune nouvelle.</div>`;
 
   box.querySelectorAll("[data-edit-story]").forEach(btn=>btn.addEventListener("click",async()=>{
     const all=await loadAllStoriesAdmin();
     const s=all.find(x=>String(x.id)===String(btn.dataset.editStory));
     if(!s)return;
     editingStoryId=String(s.id);
+    editingStoryOriginal={date:s.date||todayISO(),title:s.title,text:s.text};
     document.getElementById("adminStoryTitle").textContent="Modifier la nouvelle";
-    document.getElementById("adminDateInput").value=s.date||todayISO();
-    document.getElementById("adminTitleInput").value=s.title;
-    document.getElementById("adminBodyInput").value=s.text;
+    document.getElementById("adminDateInput").value=editingStoryOriginal.date;
+    document.getElementById("adminTitleInput").value=editingStoryOriginal.title;
+    document.getElementById("adminBodyInput").value=editingStoryOriginal.text;
+    document.getElementById("adminResetStory").style.display="grid";
     closeModalAnimated("adminStoriesModal",()=>document.getElementById("adminStoryModal").classList.add("open"));
+  }));
+
+  box.querySelectorAll("[data-delete-story-list]").forEach(btn=>btn.addEventListener("click",e=>{
+    e.stopPropagation();
+    editingStoryId=String(btn.dataset.deleteStoryList);
+    editingStoryOriginal=null;
+    deleteStorySource="list";
+    document.getElementById("deleteStoryText").textContent=`« ${btn.dataset.deleteStoryTitle||"Cette nouvelle"} » sera définitivement supprimée de la base de données, ainsi que ses likes et commentaires.`;
+    document.getElementById("deleteStoryModal").classList.add("open");
   }));
 }
 async function renderAdminComments(){
@@ -2095,10 +2160,12 @@ async function renderAdminComments(){
 
 document.getElementById("adminAddStory").addEventListener("click",()=>{
   editingStoryId=null;
+  editingStoryOriginal=null;
   document.getElementById("adminStoryTitle").textContent="Ajouter une nouvelle";
   document.getElementById("adminDateInput").value=todayISO();
   document.getElementById("adminTitleInput").value="";
   document.getElementById("adminBodyInput").value="";
+  document.getElementById("adminResetStory").style.display="none";
   closeModalAnimated("adminModal",()=>document.getElementById("adminStoryModal").classList.add("open"));
 });
 document.getElementById("adminEditStories").addEventListener("click",async()=>{
@@ -2109,6 +2176,63 @@ document.getElementById("adminManageComments").addEventListener("click",async()=
   await renderAdminComments();
   closeModalAnimated("adminModal",()=>document.getElementById("adminCommentsModal").classList.add("open"));
 });
+document.getElementById("adminResetStory").addEventListener("click",()=>{
+  if(!editingStoryId||!editingStoryOriginal)return;
+  document.getElementById("adminDateInput").value=editingStoryOriginal.date;
+  document.getElementById("adminTitleInput").value=editingStoryOriginal.title;
+  document.getElementById("adminBodyInput").value=editingStoryOriginal.text;
+  toast("Modifications réinitialisées");
+});
+
+document.getElementById("cancelDeleteStory").addEventListener("click",()=>{
+  closeModalAnimated("deleteStoryModal");
+});
+
+document.getElementById("confirmDeleteStory").addEventListener("click",async()=>{
+  if(!editingStoryId)return;
+  const id=String(editingStoryId);
+  const btn=document.getElementById("confirmDeleteStory");
+  btn.disabled=true;
+  btn.textContent="Suppression…";
+
+  // Nettoie les données liées avant de supprimer définitivement la nouvelle.
+  let res=await sb.from("comments").delete().eq("story_id",Number(id));
+  if(res.error){
+    console.error(res.error);
+    btn.disabled=false; btn.textContent="Supprimer";
+    toast("Suppression impossible");
+    return;
+  }
+  res=await sb.from("likes").delete().eq("story_id",Number(id));
+  if(res.error){
+    console.error(res.error);
+    btn.disabled=false; btn.textContent="Supprimer";
+    toast("Suppression impossible");
+    return;
+  }
+  res=await sb.from("stories").delete().eq("id",Number(id));
+  if(res.error){
+    console.error(res.error);
+    btn.disabled=false; btn.textContent="Supprimer";
+    toast("Suppression impossible");
+    return;
+  }
+
+  savedIds.delete(id);
+  localStorage.setItem("chute_library_ids",JSON.stringify([...savedIds]));
+  const source=deleteStorySource;
+  editingStoryId=null;
+  editingStoryOriginal=null;
+  deleteStorySource="editor";
+  btn.disabled=false;
+  btn.textContent="Supprimer";
+  closeModalAnimated("deleteStoryModal");
+  await loadStories();
+  if(source==="list") await renderAdminStories();
+  else closeModalAnimated("adminStoryModal");
+  toast("Nouvelle supprimée");
+});
+
 document.getElementById("adminSaveStory").addEventListener("click",async()=>{
   const date=document.getElementById("adminDateInput").value||todayISO();
   const title=document.getElementById("adminTitleInput").value.trim();
@@ -2131,6 +2255,8 @@ document.getElementById("adminSaveStory").addEventListener("click",async()=>{
 
   closeModalAnimated("adminStoryModal");
   editingStoryId=null;
+  editingStoryOriginal=null;
+  document.getElementById("adminResetStory").style.display="none";
   await loadStories(savedId);
   toast("Enregistré");
 });
