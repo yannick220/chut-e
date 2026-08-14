@@ -1136,6 +1136,31 @@ svg { display:block; width:100%; height:100%; fill:currentColor; }
   font-size:24px !important;
 }
 
+
+
+/* ===== V6.2.4 — correctifs stabilité mobile ===== */
+/* La carte ouverte reste DANS le reader-overlay : le voile est dessous,
+   les actions coeur/commentaire au-dessus. */
+.reader-overlay{ z-index:200 !important; }
+.reader-backdrop{ z-index:0 !important; }
+.story-card.expanding,
+.story-card.expanded,
+.story-card.collapsing{ z-index:1 !important; }
+.reader-actions{ z-index:3 !important; }
+
+/* Réserve une zone stable en bas de l'aperçu pour Lire plus + métadonnées. */
+.story-card:not(.expanded):not(.expanding):not(.collapsing) .story-scroll-single{
+  bottom:88px !important;
+  padding:51px 31px 0 !important;
+}
+.story-card:not(.expanded):not(.expanding):not(.collapsing) .story-body-single{
+  max-height:none !important;
+  overflow:hidden !important;
+}
+.story-card:not(.expanded):not(.expanding):not(.collapsing) .compact-fade{
+  bottom:42px !important;
+  height:120px !important;
+}
 </style>
 </head>
 <body>
@@ -1205,7 +1230,6 @@ svg { display:block; width:100%; height:100%; fill:currentColor; }
       <button id="adminAddStory">＋ Ajouter une nouvelle</button>
       <button id="adminEditStories">✎ Modifier les nouvelles</button>
       <button id="adminManageComments">☰ Gérer les commentaires</button>
-      <button id="adminLogout">Se déconnecter</button>
     </div>
   </div>
 </div>
@@ -1286,6 +1310,7 @@ const nextCue = document.getElementById("nextCue");
 const countEl = document.getElementById("libraryCount");
 const reader = document.getElementById("readerOverlay");
 const readerBackdrop = document.getElementById("readerBackdrop");
+const readerActions = document.getElementById("readerActions");
 const likeBtn = document.getElementById("likeBtn");
 const searchInputEl = document.getElementById("searchInput");
 
@@ -1587,7 +1612,8 @@ async function openReader(index=current){
   const targetWidth=appRect.width;
   const targetHeight=window.innerHeight-targetTop;
 
-  document.body.appendChild(card);
+  /* La carte doit partager le même contexte d'empilement que le voile et les actions. */
+  reader.insertBefore(card, readerActions);
   card.classList.add("expanding");
   card.style.transition="none";
   card.style.left=start.left+"px";
@@ -2083,11 +2109,6 @@ document.getElementById("adminManageComments").addEventListener("click",async()=
   await renderAdminComments();
   closeModalAnimated("adminModal",()=>document.getElementById("adminCommentsModal").classList.add("open"));
 });
-document.getElementById("adminLogout").addEventListener("click",async()=>{
-  await sb.auth.signOut();
-  closeModalAnimated("adminModal");
-  toast("Déconnecté");
-});
 document.getElementById("adminSaveStory").addEventListener("click",async()=>{
   const date=document.getElementById("adminDateInput").value||todayISO();
   const title=document.getElementById("adminTitleInput").value.trim();
@@ -2114,23 +2135,31 @@ document.getElementById("adminSaveStory").addEventListener("click",async()=>{
   toast("Enregistré");
 });
 
-/* double tap caché sur chut.e ! */
-let brandTapCount=0,brandTapTimer=null;
-document.getElementById("brand").addEventListener("click",e=>{
-  e.preventDefault();e.stopPropagation();
+/* double tap caché sur chut.e ! — un seul déclenchement */
+let brandTapCount=0,brandTapTimer=null,brandAdminOpening=false;
+const brandEl=document.getElementById("brand");
+brandEl.addEventListener("click",async e=>{
+  e.preventDefault();
+  e.stopPropagation();
+
   brandTapCount++;
   clearTimeout(brandTapTimer);
-  if(brandTapCount>=2){
+
+  if(brandTapCount===2){
     brandTapCount=0;
-    openAdmin();
-  }else{
-    brandTapTimer=setTimeout(()=>brandTapCount=0,520);
+    if(brandAdminOpening)return;
+    brandAdminOpening=true;
+    try{
+      await openAdmin();
+    }finally{
+      brandAdminOpening=false;
+    }
+    return;
   }
-});
-document.getElementById("brand").addEventListener("dblclick",e=>{
-  e.preventDefault();e.stopPropagation();
-  brandTapCount=0;
-  openAdmin();
+
+  brandTapTimer=setTimeout(()=>{
+    brandTapCount=0;
+  },420);
 });
 
 /* -------------------- BUTTONS -------------------- */
