@@ -1217,6 +1217,71 @@ svg { display:block; width:100%; height:100%; fill:currentColor; }
   z-index:12;
 }
 
+
+/* ===== Ajustement vertical V7 — composition plus équilibrée =====
+   On remonte légèrement l'en-tête, davantage le paquet de cartes,
+   et on conserve la bibliothèque près du bas afin de créer plus d'air
+   entre les cartes et la bibliothèque. */
+.brand{
+  top:max(38px, calc(env(safe-area-inset-top) + 22px)) !important;
+}
+
+.shuffle-btn,
+.search-btn{
+  top:max(36px, calc(env(safe-area-inset-top) + 20px)) !important;
+}
+
+/* Même hauteur utile qu'avant, mais centre du paquet remonté d'environ 34 px. */
+.deck{
+  top:110px !important;
+  bottom:184px !important;
+}
+
+/* La bibliothèque reste basse pour préserver l'espace inférieur
+   et augmenter nettement la respiration sous les cartes. */
+.library-dock{
+  bottom:max(24px, calc(env(safe-area-inset-bottom) + 12px)) !important;
+}
+
+/* Sur les écrans moins hauts, déplacement plus modéré pour éviter tout chevauchement. */
+@media (max-height:700px){
+  .brand{
+    top:max(24px, calc(env(safe-area-inset-top) + 16px)) !important;
+  }
+  .shuffle-btn,
+  .search-btn{
+    top:max(22px, calc(env(safe-area-inset-top) + 14px)) !important;
+  }
+  .deck{
+    top:181px !important;
+    bottom:19px !important;
+  }
+  .library-dock{
+    bottom:max(14px, env(safe-area-inset-bottom)) !important;
+  }
+}
+
+
+/* ===== V10 — équilibre vertical final =====
+   On ne modifie plus la géométrie de la page : on descend simplement
+   le paquet de cartes pour équilibrer l'espace au-dessus et au-dessous. */
+.deck{
+  transform:translateY(30px) !important;
+}
+
+
+/* ===== V12 — titre franchement redescendu ===== */
+.brand{
+  transform:translateY(32px) !important;
+}
+
+
+/* ===== V13 — boutons alignés avec le titre ===== */
+.shuffle-btn,
+.search-btn{
+  transform:translateY(32px) !important;
+}
+
 </style>
 </head>
 <body>
