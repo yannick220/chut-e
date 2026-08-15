@@ -1182,14 +1182,54 @@ svg { display:block; width:100%; height:100%; fill:currentColor; }
   bottom:42px !important;
   height:120px !important;
 }
+
+.dismissed-btn{ position:absolute; }
+.dismissed-btn svg{ fill:none; stroke:currentColor; stroke-width:8; stroke-linecap:round; stroke-linejoin:round; }
+.dismissed-count{
+  position:absolute;
+  right:-4px;
+  bottom:-4px;
+  min-width:19px;
+  height:19px;
+  padding:0 5px;
+  border-radius:999px;
+  background:#000;
+  color:#fff;
+  display:grid;
+  place-items:center;
+  font-size:10px;
+  font-weight:800;
+  line-height:1;
+}
+.dismiss-cue{
+  position:absolute;
+  left:50%;
+  bottom:22px;
+  transform:translateX(-50%) translateY(6px);
+  border-radius:999px;
+  padding:9px 14px;
+  background:rgba(0,0,0,.82);
+  color:#fff;
+  font-size:12px;
+  font-weight:700;
+  opacity:0;
+  pointer-events:none;
+  z-index:12;
+}
+
 </style>
 </head>
 <body>
 <div class="app" id="app">
   <div class="brand" id="brand">chut.e !</div>
 
-  <button class="shuffle-btn" id="shuffleBtn" aria-label="Nouvelle aléatoire">
-    <svg viewBox="0 -110 120 140" aria-hidden="true"><path d="M70 4.77 V-5.23 H83 L67.125 -21.105 L74.25 -28.23 L90 -12.48 V-25.23 H100 V4.77 H70 Z M27 4.77  20 -2.23  83 -65.23 H70 V-75.23 H100 V-45.23 H90 V-58.23 L27 4.77 Z M45.875 -42.355  20 -68.23  27 -75.23  52.875 -49.355  45.875 -42.355 Z"/></svg>
+  <button class="shuffle-btn dismissed-btn" id="dismissedBtn" aria-label="Archives">
+    <svg viewBox="0 0 120 120" aria-hidden="true">
+      <path d="M24 42 H96 V92 H24 Z"/>
+      <path d="M18 28 H102 V42 H18 Z"/>
+      <path d="M46 58 H74"/>
+    </svg>
+    <span class="dismissed-count" id="dismissedCount">0</span>
   </button>
   <button class="search-btn" id="searchBtn" aria-label="Rechercher une nouvelle">
     <svg viewBox="0 -110 120 140" aria-hidden="true"><path d="M98 9.77  66.5 -21.73 Q62.75 -18.73 57.875 -16.98 Q53 -15.23 47.5 -15.23 Q33.875 -15.23 24.438 -24.667 Q15 -34.105 15 -47.73 Q15 -61.355 24.438 -70.792 Q33.875 -80.23 47.5 -80.23 Q61.125 -80.23 70.562 -70.792 Q80 -61.355 80 -47.73 Q80 -42.23 78.25 -37.355 Q76.5 -32.48 73.5 -28.73 L105 2.77 L98 9.77 Z M47.5 -25.23 Q56.875 -25.23 63.438 -31.792 Q70 -38.355 70 -47.73 Q70 -57.105 63.438 -63.667 Q56.875 -70.23 47.5 -70.23 Q38.125 -70.23 31.562 -63.667 Q25 -57.105 25 -47.73 Q25 -38.355 31.562 -31.792 Q38.125 -25.23 47.5 -25.23 Z"/></svg>
@@ -1199,8 +1239,7 @@ svg { display:block; width:100%; height:100%; fill:currentColor; }
     <div class="stack-card back-left" id="backLeft"></div>
     <div class="stack-card back-right" id="backRight"></div>
     <div class="save-cue" id="saveCue">↓ Ma bibliothèque</div>
-    <div class="nav-cue left" id="prevCue">← précédente</div>
-    <div class="nav-cue right" id="nextCue">suivante →</div>
+    <div class="dismiss-cue" id="dismissCue">↑ Archives</div>
     <article class="story-card" id="storyCard"></article>
   </main>
 
@@ -1231,6 +1270,24 @@ svg { display:block; width:100%; height:100%; fill:currentColor; }
   <div class="modal-panel">
     <div class="modal-head"><h2>Ma bibliothèque</h2></div>
     <div class="library-list" id="libraryList"></div>
+  </div>
+</div>
+
+<div class="modal" id="dismissedModal">
+  <div class="modal-panel">
+    <div class="modal-head"><h2>Archives</h2></div>
+    <div class="library-list" id="dismissedList"></div>
+  </div>
+</div>
+
+<div class="modal confirm-modal" id="restoreArchiveModal">
+  <div class="modal-panel">
+    <div class="modal-head"><h2>Retirer des Archives ?</h2></div>
+    <p class="confirm-copy">Cette nouvelle sera retirée des Archives et pourra de nouveau apparaître sur l’écran d’accueil.</p>
+    <div class="confirm-actions">
+      <button class="confirm-cancel" id="cancelRestoreArchive">Annuler</button>
+      <button class="confirm-delete" id="confirmRestoreArchive">Retirer</button>
+    </div>
   </div>
 </div>
 
@@ -1340,13 +1397,15 @@ let editingStoryId = null;
 let editingStoryOriginal = null;
 let deleteStorySource = "editor";
 let commentsSupportReplies = true;
+let readerStoryOverride = null;
+let pendingArchiveRemoval = null;
 
 const deck = document.getElementById("deck");
 const card = document.getElementById("storyCard");
 const saveCue = document.getElementById("saveCue");
-const prevCue = document.getElementById("prevCue");
-const nextCue = document.getElementById("nextCue");
+const dismissCue = document.getElementById("dismissCue");
 const countEl = document.getElementById("libraryCount");
+const dismissedCountEl = document.getElementById("dismissedCount");
 const reader = document.getElementById("readerOverlay");
 const readerBackdrop = document.getElementById("readerBackdrop");
 const readerActions = document.getElementById("readerActions");
@@ -1354,6 +1413,7 @@ const likeBtn = document.getElementById("likeBtn");
 const searchInputEl = document.getElementById("searchInput");
 
 const savedIds = new Set(JSON.parse(localStorage.getItem("chute_library_ids") || "[]").map(String));
+const dismissedIds = new Set(JSON.parse(localStorage.getItem("chute_dismissed_ids") || "[]").map(String));
 let likedIds = new Set();
 let likeCounts = new Map();
 
@@ -1391,13 +1451,19 @@ function toast(msg){
   window.__toast=setTimeout(()=>t.classList.remove("show"),1500);
 }
 function storyById(id){ return STORIES.find(s => String(s.id) === String(id)); }
-function currentStory(){ return STORIES[current] || null; }
+function currentStory(){
+  return readerStoryOverride || homeStories()[current] || null;
+}
 function getDisplayedLikes(storyOrIndex){
   const s = typeof storyOrIndex === "number" ? STORIES[storyOrIndex] : storyOrIndex;
   if(!s) return 0;
   return likeCounts.get(String(s.id)) || 0;
 }
-function updateCount(){ countEl.textContent=savedIds.size; }
+function updateCount(){
+  countEl.textContent=savedIds.size;
+  dismissedCountEl.textContent=dismissedIds.size;
+  dismissedCountEl.style.display=dismissedIds.size ? "grid" : "none";
+}
 
 function splitStoryParagraphs(value){
   const normalized = String(value || "")
@@ -1432,6 +1498,13 @@ function publicStories(rows){
     .sort((a,b)=>(b.date||"").localeCompare(a.date||""));
 }
 
+function homeStories(){
+  return STORIES.filter(s => {
+    const id=String(s.id);
+    return !savedIds.has(id) && !dismissedIds.has(id);
+  });
+}
+
 async function loadStories(preferredId=null){
   const {data,error}=await sb
     .from("stories")
@@ -1453,11 +1526,12 @@ async function loadStories(preferredId=null){
     const idx=STORIES.findIndex(s=>String(s.id)===String(preferredId));
     if(idx>=0) current=idx;
   }
-  if(current >= STORIES.length) current=0;
+  if(current >= homeStories().length) current=0;
 
   await loadLikeSummaries();
   renderCard(false);
   renderLibrary();
+  renderDismissed();
   renderSearchResults(searchInputEl?.value || "");
   return true;
 }
@@ -1485,7 +1559,11 @@ async function loadLikeSummaries(){
 
 function storyCardHTML(s){
   if(!s){
-    return `<div class="card-content"><h1 class="card-title">Aucune nouvelle</h1><div class="preview">Aucune nouvelle publiée pour le moment.</div></div>`;
+    const hasPublishedStories = STORIES.length > 0;
+    return `<div class="card-content">
+      <h1 class="card-title">${hasPublishedStories ? "Plus rien à découvrir… pour l’instant." : "Aucune nouvelle"}</h1>
+      <div class="preview">${hasPublishedStories ? "Vous avez parcouru toutes les nouvelles disponibles." : "Aucune nouvelle publiée pour le moment."}</div>
+    </div>`;
   }
   return `
     <div class="expanded-fade-top"></div>
@@ -1588,11 +1666,32 @@ function saveCurrent(){
   savedIds.add(id);
   localStorage.setItem("chute_library_ids",JSON.stringify([...savedIds]));
   updateCount();
+  const remaining=homeStories();
+  if(current >= remaining.length) current=0;
+  renderCard(true);
   if(wasNew){
     countEl.animate([{transform:"scale(1)"},{transform:"scale(1.22)"},{transform:"scale(1)"}],{duration:350,easing:"ease-out"});
     toast("Ajoutée à Ma bibliothèque");
   } else {
     toast("Déjà dans Ma bibliothèque");
+  }
+}
+
+function dismissCurrent(){
+  const s=currentStory();
+  if(!s) return;
+  const id=String(s.id);
+  const wasNew=!dismissedIds.has(id);
+  dismissedIds.add(id);
+  localStorage.setItem("chute_dismissed_ids",JSON.stringify([...dismissedIds]));
+  updateCount();
+  const remaining=homeStories();
+  if(current >= remaining.length) current=0;
+  renderCard(true);
+  renderDismissed();
+  if(wasNew){
+    dismissedCountEl.animate([{transform:"scale(1)"},{transform:"scale(1.22)"},{transform:"scale(1)"}],{duration:350,easing:"ease-out"});
+    toast("Nouvelle archivée");
   }
 }
 
@@ -1648,7 +1747,13 @@ function bindExpandedScroll(){
   sc.addEventListener("pointercancel",finish);
 }
 
-async function openReader(index=current){
+async function openReader(index=current,storyOverride=null){
+  if(storyOverride){
+    readerStoryOverride=storyOverride;
+    card.innerHTML=storyCardHTML(storyOverride);
+    bindExpandedScroll();
+    updateLikeButton();
+  }
   if(index!==current){
     current=index;
     renderCard(false);
@@ -1740,11 +1845,19 @@ function closeReader(){
     reader.classList.remove("open","closing");
     document.getElementById("app").classList.remove("reading");
 
-    if(storyReturnTarget==="library"){
+    const returnTarget=storyReturnTarget;
+    readerStoryOverride=null;
+    renderCard(false);
+
+    if(returnTarget==="library"){
       const lib=document.getElementById("libraryModal");
       lib.style.visibility="";
       lib.classList.add("open");
-    } else if(storyReturnTarget==="search"){
+    } else if(returnTarget==="dismissed"){
+      const modal=document.getElementById("dismissedModal");
+      modal.style.visibility="";
+      modal.classList.add("open");
+    } else if(returnTarget==="search"){
       const modal=document.getElementById("searchModal");
       modal.style.visibility="";
       modal.classList.remove("open","closing");
@@ -1757,7 +1870,8 @@ function closeReader(){
 
 /* -------------------- SWIPE -------------------- */
 function moveTo(nextIndex,direction){
-  if(!STORIES.length)return;
+  const pool=homeStories();
+  if(!pool.length)return;
   card.classList.remove("dragging");
   card.style.transition="transform .30s cubic-bezier(.2,.8,.2,1),opacity .24s ease";
   card.style.transform=`translate3d(${direction*125}%,0,0) rotate(${direction*9}deg)`;
@@ -1769,7 +1883,7 @@ function moveTo(nextIndex,direction){
     direction>0 ? "translate(0px,0px) rotate(0deg) scale(1.01)" : "translate(38px,28px) rotate(10deg)";
 
   setTimeout(()=>{
-    current=(nextIndex+STORIES.length)%STORIES.length;
+    current=(nextIndex+pool.length)%pool.length;
     card.style.transition="none";
     card.style.opacity="0";
     card.style.transform=`translate3d(${-direction*38}px,10px,0) rotate(${-direction*3}deg) scale(.97)`;
@@ -1800,19 +1914,21 @@ card.addEventListener("pointermove",e=>{
 
   if(ax>ay){
     card.style.transform=`translate3d(${drag.dx}px,${drag.dy*.12}px,0) rotate(${drag.dx*.035}deg)`;
-    prevCue.style.opacity=drag.dx>18?Math.min(.9,drag.dx/100):0;
-    nextCue.style.opacity=drag.dx<-18?Math.min(.9,-drag.dx/100):0;
     saveCue.style.opacity=0;
+    dismissCue.style.opacity=0;
   }else if(drag.dy>0){
     card.style.transform=`translate3d(0,${drag.dy*.55}px,0) scale(${Math.min(1.055,1+drag.dy/1800)})`;
     saveCue.style.opacity=Math.min(1,drag.dy/80);
-    prevCue.style.opacity=nextCue.style.opacity=0;
+    dismissCue.style.opacity=0;
+  }else if(drag.dy<0){
+    card.style.transform=`translate3d(0,${drag.dy*.55}px,0) scale(${Math.min(1.045,1+(-drag.dy)/2200)})`;
+    dismissCue.style.opacity=Math.min(1,-drag.dy/80);
+    saveCue.style.opacity=0;
   }
 });
 function resetCues(){
   saveCue.style.opacity=0;
-  prevCue.style.opacity=0;
-  nextCue.style.opacity=0;
+  dismissCue.style.opacity=0;
 }
 function endDrag(){
   if(!drag)return;
@@ -1828,6 +1944,13 @@ function endDrag(){
     saveCurrent();
     card.style.transition="transform .22s cubic-bezier(.2,.9,.2,1)";
     card.style.transform="translate3d(0,22px,0) scale(1.055)";
+    setTimeout(()=>card.style.transform="translate3d(0,0,0) scale(1)",160);
+    resetCues(); return;
+  }
+  if(ay>ax && d.dy<-72){
+    dismissCurrent();
+    card.style.transition="transform .22s cubic-bezier(.2,.9,.2,1)";
+    card.style.transform="translate3d(0,-22px,0) scale(1.045)";
     setTimeout(()=>card.style.transform="translate3d(0,0,0) scale(1)",160);
     resetCues(); return;
   }
@@ -1977,7 +2100,7 @@ function renderLibrary(){
     storyReturnTarget="library";
     const lib=document.getElementById("libraryModal");
     lib.style.visibility="hidden";
-    openReader(idx);
+    openReader(idx,STORIES[idx]);
   }));
 
   list.querySelectorAll("[data-remove-library]").forEach(btn=>btn.addEventListener("click",e=>{
@@ -2002,8 +2125,69 @@ document.getElementById("confirmRemoveLibrary").addEventListener("click",()=>{
   localStorage.setItem("chute_library_ids",JSON.stringify([...savedIds]));
   pendingLibraryRemoval=null;
   updateCount();
+  current=0;
+  renderCard(true);
   renderLibrary();
   closeModalAnimated("removeLibraryModal",()=>toast("Retirée de Ma bibliothèque"));
+});
+
+
+function renderDismissed(){
+  const list=document.getElementById("dismissedList");
+  if(!list)return;
+  const items=[...dismissedIds].map(storyById).filter(Boolean);
+
+  if(!items.length){
+    list.innerHTML=`<div class="empty">Aucune nouvelle archivée.</div>`;
+    return;
+  }
+
+  list.innerHTML=items.map(s=>`<div class="library-row-wrap">
+      <button class="lib-row library-row-main" data-dismissed-story-id="${s.id}">
+        <strong>${escapeHTML(s.title)}</strong>
+        <small>♡ ${getDisplayedLikes(s)} · ${s.words} mots · ${s.minutes} min</small>
+      </button>
+      <button class="library-remove" data-restore-dismissed="${s.id}" aria-label="Remettre à l’accueil">×</button>
+    </div>`).join("");
+
+  list.querySelectorAll("[data-dismissed-story-id]").forEach(btn=>btn.addEventListener("click",()=>{
+    const s=storyById(btn.dataset.dismissedStoryId);
+    if(!s)return;
+    storyReturnTarget="dismissed";
+    const modal=document.getElementById("dismissedModal");
+    modal.style.visibility="hidden";
+    const idx=STORIES.findIndex(x=>String(x.id)===String(s.id));
+    openReader(idx,s);
+  }));
+
+  list.querySelectorAll("[data-restore-dismissed]").forEach(btn=>btn.addEventListener("click",e=>{
+    e.stopPropagation();
+    pendingArchiveRemoval=String(btn.dataset.restoreDismissed);
+    document.getElementById("restoreArchiveModal").classList.add("open");
+  }));
+}
+
+document.getElementById("cancelRestoreArchive").addEventListener("click",()=>{
+  pendingArchiveRemoval=null;
+  closeModalAnimated("restoreArchiveModal");
+});
+
+document.getElementById("confirmRestoreArchive").addEventListener("click",()=>{
+  if(!pendingArchiveRemoval)return;
+  const id=String(pendingArchiveRemoval);
+  dismissedIds.delete(id);
+  localStorage.setItem("chute_dismissed_ids",JSON.stringify([...dismissedIds]));
+  pendingArchiveRemoval=null;
+  updateCount();
+  current=0;
+  renderCard(true);
+  renderDismissed();
+  closeModalAnimated("restoreArchiveModal",()=>toast("Retirée des Archives"));
+});
+
+document.getElementById("dismissedBtn").addEventListener("click",()=>{
+  renderDismissed();
+  document.getElementById("dismissedModal").classList.add("open");
 });
 
 /* -------------------- SEARCH -------------------- */
@@ -2040,7 +2224,7 @@ function renderSearchResults(query){
     const modal=document.getElementById("searchModal");
     modal.classList.remove("open","closing");
     modal.style.visibility="";
-    openReader(idx);
+    openReader(idx,STORIES[idx]);
   }));
 }
 document.getElementById("searchBtn").addEventListener("click",()=>{
@@ -2289,12 +2473,6 @@ brandEl.addEventListener("click",async e=>{
 });
 
 /* -------------------- BUTTONS -------------------- */
-document.getElementById("shuffleBtn").addEventListener("click",()=>{
-  if(STORIES.length<2)return;
-  let n=current;
-  while(n===current)n=Math.floor(Math.random()*STORIES.length);
-  moveTo(n,-1);
-});
 likeBtn.addEventListener("click",toggleLike);
 readerBackdrop.addEventListener("click",()=>{
   if(reader.classList.contains("open"))closeReader();
