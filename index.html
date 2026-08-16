@@ -1280,6 +1280,28 @@ svg { display:block; width:100%; height:100%; fill:currentColor; }
   transform:translateY(2px) !important;
 }
 
+
+/* ===== V18 — correction responsive multi-téléphones =====
+   Certains téléphones passent sous le breakpoint max-height:700px.
+   L'ancienne règle plaçait alors le paquet de cartes beaucoup trop bas.
+   Cette règle finale neutralise ce décalage tout en conservant
+   la composition actuelle sur les écrans standards. */
+@media (max-height:700px){
+  .deck{
+    top:106px !important;
+    bottom:90px !important;
+    transform:translateY(15px) !important;
+  }
+
+  .story-card{
+    height:430px !important;
+  }
+
+  .stack-card{
+    height:452px !important;
+  }
+}
+
 </style>
 </head>
 <body>
