@@ -1363,6 +1363,80 @@ svg { display:block; width:100%; height:100%; fill:currentColor; }
   }
 }
 
+
+/* ===== V20 — centrage entre les contrôles, pas entre les bords =====
+   Principe :
+   - en-tête fixé en haut
+   - bibliothèque fixée en bas
+   - zone centrale comprise entre le bas réel des contrôles du haut
+     et le haut réel de la bibliothèque
+   - paquet de cartes légèrement compensé vers le haut pour tenir compte
+     du décalage visuel des cartes arrière */
+
+:root{
+  --header-top: max(36px, calc(env(safe-area-inset-top) + 20px));
+  --header-size: 48px;
+  --header-gap: 34px;
+
+  --library-bottom: max(22px, calc(env(safe-area-inset-bottom) + 12px));
+  --library-height: 70px;
+  --library-gap: 34px;
+
+  --deck-visual-compensation: -16px;
+}
+
+/* Titre et boutons du haut */
+.brand{
+  top:calc(var(--header-top) + 2px) !important;
+  transform:none !important;
+}
+
+.shuffle-btn,
+.search-btn{
+  top:var(--header-top) !important;
+  transform:none !important;
+}
+
+/* Bibliothèque */
+.library-dock{
+  bottom:var(--library-bottom) !important;
+  transform:none !important;
+}
+
+/* Zone réellement disponible ENTRE les contrôles */
+.deck{
+  top:calc(var(--header-top) + var(--header-size) + var(--header-gap)) !important;
+  bottom:calc(var(--library-bottom) + var(--library-height) + var(--library-gap)) !important;
+
+  display:flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+
+  transform:translateY(var(--deck-visual-compensation)) !important;
+}
+
+/* Même logique sur les écrans courts : plus aucun repositionnement arbitraire */
+@media (max-height:700px){
+  .brand{
+    top:calc(var(--header-top) + 2px) !important;
+  }
+
+  .shuffle-btn,
+  .search-btn{
+    top:var(--header-top) !important;
+  }
+
+  .library-dock{
+    bottom:var(--library-bottom) !important;
+  }
+
+  .deck{
+    top:calc(var(--header-top) + var(--header-size) + var(--header-gap)) !important;
+    bottom:calc(var(--library-bottom) + var(--library-height) + var(--library-gap)) !important;
+    transform:translateY(var(--deck-visual-compensation)) !important;
+  }
+}
+
 </style>
 </head>
 <body>
