@@ -1302,6 +1302,67 @@ svg { display:block; width:100%; height:100%; fill:currentColor; }
   }
 }
 
+
+/* ===== V19 — structure verticale ancrée et réellement responsive =====
+   1) En-tête fixé par rapport au bord supérieur
+   2) Bibliothèque fixée par rapport au bord inférieur
+   3) Paquet de cartes centré automatiquement dans l'espace restant
+   Aucune correction différente selon la hauteur du téléphone. */
+
+/* En-tête : même repère vertical sur tous les téléphones */
+.brand{
+  top:max(38px, calc(env(safe-area-inset-top) + 22px)) !important;
+  transform:none !important;
+}
+
+.shuffle-btn,
+.search-btn{
+  top:max(36px, calc(env(safe-area-inset-top) + 20px)) !important;
+  transform:none !important;
+}
+
+/* Bibliothèque : ancrée au bas de l'écran, safe-area comprise */
+.library-dock{
+  bottom:max(22px, calc(env(safe-area-inset-bottom) + 12px)) !important;
+  transform:none !important;
+}
+
+/* Zone des cartes :
+   - commence sous l'en-tête
+   - s'arrête au-dessus de la bibliothèque
+   - flex centre naturellement le paquet entre les deux */
+.deck{
+  top:max(112px, calc(env(safe-area-inset-top) + 96px)) !important;
+  bottom:max(112px, calc(env(safe-area-inset-bottom) + 96px)) !important;
+  transform:none !important;
+  display:flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+}
+
+/* On neutralise les anciens breakpoints qui déplaçaient le paquet
+   sur les téléphones à faible hauteur. */
+@media (max-height:700px){
+  .brand{
+    top:max(38px, calc(env(safe-area-inset-top) + 22px)) !important;
+  }
+
+  .shuffle-btn,
+  .search-btn{
+    top:max(36px, calc(env(safe-area-inset-top) + 20px)) !important;
+  }
+
+  .library-dock{
+    bottom:max(22px, calc(env(safe-area-inset-bottom) + 12px)) !important;
+  }
+
+  .deck{
+    top:max(112px, calc(env(safe-area-inset-top) + 96px)) !important;
+    bottom:max(112px, calc(env(safe-area-inset-bottom) + 96px)) !important;
+    transform:none !important;
+  }
+}
+
 </style>
 </head>
 <body>
