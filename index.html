@@ -2297,7 +2297,7 @@ document.getElementById("sendComment").addEventListener("click",async()=>{
 function renderLibrary(){
   const list=document.getElementById("libraryList");
   if(!list)return;
-  const items=[...savedIds].map(storyById).filter(Boolean);
+  const items=[...savedIds].reverse().map(storyById).filter(Boolean);
 
   if(!items.length){
     list.innerHTML=`<div class="empty">Aucune nouvelle dans Ma bibliothèque.</div>`;
@@ -2355,7 +2355,7 @@ document.getElementById("confirmRemoveLibrary").addEventListener("click",()=>{
 function renderDismissed(){
   const list=document.getElementById("dismissedList");
   if(!list)return;
-  const items=[...dismissedIds].map(storyById).filter(Boolean);
+  const items=[...dismissedIds].reverse().map(storyById).filter(Boolean);
 
   if(!items.length){
     list.innerHTML=`<div class="empty">Aucune nouvelle archivée.</div>`;
@@ -2502,6 +2502,7 @@ async function loadAllStoriesAdmin(){
 async function renderAdminStories(){
   const box=document.getElementById("adminStoriesList");
   const all=await loadAllStoriesAdmin();
+  all.sort((a,b)=>(a.title||"").localeCompare(b.title||"","fr",{sensitivity:"base",ignorePunctuation:true}));
   box.innerHTML=all.map(s=>`
     <div class="admin-story-row-wrap">
       <button class="lib-row admin-story-row-main" data-edit-story="${s.id}">
