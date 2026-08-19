@@ -2778,6 +2778,47 @@ html, body{
   transition:opacity .34s ease !important;
 }
 
+
+/* ===== V66 — même niveau supérieur pour Recherche / Bibliothèque / Archives / Nouvelle ===== */
+
+/* Niveau de référence : celui calculé pour Recherche, c'est-à-dire
+   le sommet réel du paquet de cartes. */
+#libraryModal .modal-panel,
+#dismissedModal .modal-panel{
+  top:var(--search-panel-top,300px) !important;
+  bottom:auto !important;
+
+  /* Par défaut, le panneau peut monter jusqu'à ce niveau,
+     mais il ne doit pas devenir artificiellement trop haut
+     s'il contient peu de bandeaux. */
+  height:auto !important;
+  max-height:calc(100svh - var(--search-panel-top,300px)) !important;
+}
+
+/* Quand il y a assez de contenu, la fenêtre remplit naturellement
+   jusqu'en bas ; seuls les bandeaux défilent. */
+#libraryList,
+#dismissedList{
+  max-height:calc(100svh - var(--search-panel-top,300px) - 96px) !important;
+}
+
+/* Le lecteur s'ouvre lui aussi avec son bord supérieur exactement
+   au même niveau que Recherche. */
+.reader-sheet{
+  top:var(--search-panel-top,300px) !important;
+  height:calc(100svh - var(--search-panel-top,300px)) !important;
+  max-height:none !important;
+}
+
+/* Sur les très petits écrans, on garde toujours une hauteur minimale utile. */
+@media (max-height:700px){
+  #libraryModal .modal-panel,
+  #dismissedModal .modal-panel,
+  .reader-sheet{
+    top:var(--search-panel-top,220px) !important;
+  }
+}
+
 </style>
 </head>
 <body>
@@ -4462,6 +4503,13 @@ function updateSearchFadeHeight(){
   );
 
   document.documentElement.style.setProperty("--search-fade-height",height+"px");
+}
+
+
+function ensureSharedPanelTop(){
+  if(typeof setSearchPanelTopFromCards==="function"){
+    setSearchPanelTopFromCards();
+  }
 }
 
 function setSearchPanelTopFromCards(){
