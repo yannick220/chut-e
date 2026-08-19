@@ -2544,6 +2544,240 @@ html, body{
   letter-spacing:-.24px !important;
 }
 
+
+/* ===== V61 — titres Ma bibliothèque / Archives fixes pendant le scroll ===== */
+
+#libraryModal .modal-panel,
+#dismissedModal .modal-panel{
+  display:flex !important;
+  flex-direction:column !important;
+  overflow:hidden !important;
+}
+
+/* Le titre reste fixe en haut de la fenêtre secondaire. */
+#libraryModal .modal-head,
+#dismissedModal .modal-head{
+  flex:0 0 auto !important;
+  position:relative;
+  z-index:5;
+  background:#fff;
+}
+
+/* Seuls les bandeaux défilent. */
+#libraryList,
+#dismissedList{
+  flex:1 1 auto !important;
+  min-height:0 !important;
+  overflow-y:auto !important;
+  overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
+  padding-bottom:max(6px, env(safe-area-inset-bottom));
+}
+
+
+/* ===== V62 — aplats Apple : suppression de TOUS les fondus + Recherche corrigée ===== */
+
+/* ---------- 1. Aucun fondu dans les cartes / le lecteur ---------- */
+.reader-fade-top,
+.reader-fade-bottom,
+.compact-fade,
+.expanded-fade-top,
+.expanded-fade-bottom{
+  display:none !important;
+  background:none !important;
+}
+
+/* Le titre flottant reste sur un aplat blanc net.
+   On conserve uniquement le masque BLANC OPAQUE au-dessus du titre,
+   nécessaire pour empêcher le texte de réapparaître dans l'en-tête. */
+.story-card.expanded .story-title-single::after,
+.story-card.expanding .story-title-single::after{
+  content:none !important;
+  display:none !important;
+  background:none !important;
+  -webkit-backdrop-filter:none !important;
+  backdrop-filter:none !important;
+  -webkit-mask-image:none !important;
+  mask-image:none !important;
+}
+
+/* Aucun gradient résiduel sur les cartes. */
+.story-card .compact-fade,
+.story-card .expanded-fade-top,
+.story-card .expanded-fade-bottom{
+  background:none !important;
+}
+
+/* ---------- 2. Recherche : voile gris derrière, feuille blanche en aplat ---------- */
+#searchModal{
+  background:rgba(0,0,0,.22) !important;
+  padding:0 !important;
+}
+
+/* La feuille reste ancrée exactement au sommet mesuré des cartes.
+   Sa hauteur est la hauteur RÉELLEMENT visible jusqu'au clavier.
+   Ainsi aucune bande de l'écran principal ne peut apparaître entre
+   les résultats et le clavier. */
+#searchModal .modal-panel{
+  position:absolute !important;
+  left:50% !important;
+  top:var(--search-panel-top,300px) !important;
+  bottom:auto !important;
+
+  width:min(100%,430px) !important;
+  height:calc(var(--keyboard-visible-height,100svh) - var(--search-panel-top,300px)) !important;
+  max-height:none !important;
+
+  transform:translateX(-50%) translateY(100%) !important;
+  display:flex !important;
+  flex-direction:column !important;
+  overflow:hidden !important;
+
+  background:#fff !important;
+  padding-bottom:0 !important;
+  box-sizing:border-box;
+}
+
+#searchModal.open .modal-panel{
+  transform:translateX(-50%) translateY(0) !important;
+}
+
+/* Suppression totale du fondu de Recherche. */
+#searchModal .modal-panel::before,
+#searchModal .modal-panel::after{
+  content:none !important;
+  display:none !important;
+  background:none !important;
+}
+
+/* Haut de Recherche : aplat blanc fixe. */
+#searchModal .modal-head,
+#searchModal .search-box,
+#searchModal .search-field,
+#searchModal .search-filters{
+  flex:0 0 auto !important;
+  position:relative;
+  z-index:4 !important;
+  background:#fff !important;
+}
+
+/* Seuls les bandeaux défilent, sur fond blanc, jusqu'au clavier. */
+#searchResults{
+  flex:1 1 auto !important;
+  min-height:0 !important;
+  overflow-y:auto !important;
+  overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
+
+  position:relative !important;
+  z-index:1 !important;
+  background:#fff !important;
+
+  padding-bottom:0 !important;
+  margin-bottom:0 !important;
+}
+
+/* Neutralise tous les anciens media queries de hauteur Recherche. */
+@media (min-height:700px){
+  #searchModal .modal-panel{
+    top:var(--search-panel-top,300px) !important;
+    bottom:auto !important;
+    height:calc(var(--keyboard-visible-height,100svh) - var(--search-panel-top,300px)) !important;
+    max-height:none !important;
+  }
+}
+
+
+/* ===== V63 — fermeture des fenêtres à la même vitesse que l'ouverture ===== */
+
+/* Une seule durée pour l'ouverture ET la fermeture de tous les panneaux. */
+.modal-panel{
+  transition:transform .34s cubic-bezier(.2,.82,.2,1) !important;
+}
+
+/* Pendant la fermeture, on ne fait PLUS disparaître le voile/la fenêtre
+   avant la fin du glissement. */
+.modal.closing{
+  opacity:1 !important;
+}
+
+/* Tous les panneaux redescendent réellement hors écran. */
+.modal.closing .modal-panel{
+  transform:translateY(100%) !important;
+}
+
+/* Recherche a un translateX permanent pour son centrage :
+   il faut impérativement le conserver pendant la fermeture. */
+#searchModal.closing .modal-panel{
+  transform:translateX(-50%) translateY(100%) !important;
+}
+
+/* Le voile gris reste visible pendant tout le glissement,
+   puis disparaît seulement une fois le panneau complètement sorti. */
+.modal{
+  transition:opacity .34s ease !important;
+}
+
+
+/* ===== V64 — voile gris uniforme pour tous les écrans secondaires ===== */
+
+/* Même voile, même opacité, même fondu pour TOUTES les modales. */
+.modal{
+  background:rgba(0,0,0,.22) !important;
+  opacity:0;
+  transition:opacity .34s ease !important;
+}
+
+/* Dès qu'une fenêtre secondaire est ouverte, le voile apparaît en fondu. */
+.modal.open{
+  opacity:1 !important;
+}
+
+/* Pendant la fermeture, le voile disparaît progressivement
+   à la même vitesse que le panneau glisse vers le bas. */
+.modal.closing{
+  opacity:0 !important;
+}
+
+/* Recherche ne doit plus avoir un traitement de voile différent. */
+#searchModal{
+  background:rgba(0,0,0,.22) !important;
+}
+
+
+/* ===== V65 — même voile gris pour lecteur et modales ===== */
+
+/* Les modales utilisent ce gris semi-transparent sur l'écran principal. */
+.modal,
+#searchModal{
+  background:rgba(0,0,0,.22) !important;
+}
+
+/* Le lecteur utilisait encore un aplat #e6e6e6 :
+   on le remplace par EXACTEMENT le même voile. */
+.reader-overlay{
+  background:transparent !important;
+}
+
+.reader-backdrop{
+  background:rgba(0,0,0,.22) !important;
+  opacity:0 !important;
+  transition:opacity .34s ease !important;
+}
+
+.reader-overlay.open .reader-backdrop{
+  opacity:1 !important;
+}
+
+.reader-overlay.closing .reader-backdrop{
+  opacity:0 !important;
+}
+
+/* Même durée d'apparition/disparition partout. */
+.modal{
+  transition:opacity .34s ease !important;
+}
+
 </style>
 </head>
 <body>
@@ -4275,11 +4509,14 @@ searchInputEl.addEventListener("search",()=>renderSearchResults(searchInputEl.va
 function closeModalAnimated(modalOrId,callback){
   const modal=typeof modalOrId==="string"?document.getElementById(modalOrId):modalOrId;
   if(!modal||!modal.classList.contains("open")){ if(callback)callback(); return; }
+
   modal.classList.add("closing");
+
+  /* Même durée que l'animation d'ouverture du panneau. */
   setTimeout(()=>{
     modal.classList.remove("open","closing");
     if(callback)callback();
-  },330);
+  },340);
 }
 
 document.getElementById("closeWithoutBookmark").addEventListener("click",()=>{
