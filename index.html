@@ -2524,6 +2524,16 @@ function currentReadableParagraph(){
   }) || paragraphs[paragraphs.length-1];
 }
 
+function isAtStoryEnd(){
+  const sc=card.querySelector("#storyScrollSingle");
+  const storyOnly=card.querySelector("#storyTextOnly");
+  if(!sc || !storyOnly)return false;
+
+  const storyEnd=storyOnly.offsetTop+storyOnly.offsetHeight;
+  const viewportBottom=sc.scrollTop+sc.clientHeight;
+  return viewportBottom>=storyEnd-6;
+}
+
 function shouldOfferBookmarkOnClose(story){
   if(!story)return false;
 
@@ -3351,6 +3361,24 @@ function closeReader(){
   if(!card.classList.contains("expanded") && !card.classList.contains("expanding"))return;
 
   const s=currentStory();
+
+  /* La seule exception : si le lecteur est réellement arrivé au bout
+     de la nouvelle, on ne propose jamais de marque-page. Un éventuel
+     ancien point de reprise est supprimé, puisque la lecture est terminée. */
+  if(isAtStoryEnd()){
+    if(s){
+      const id=String(s.id);
+      if(manualBookmarks[id]){
+        delete manualBookmarks[id];
+        saveManualBookmarks();
+      }
+    }
+    finalizeCloseReader();
+    return;
+  }
+
+  /* Partout ailleurs, y compris lors de la relecture d'une nouvelle verte,
+     on peut proposer un nouveau point de reprise. */
   if(!shouldOfferBookmarkOnClose(s)){
     finalizeCloseReader();
     return;
