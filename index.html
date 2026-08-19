@@ -2244,6 +2244,261 @@ html, body{
 
 
 
+
+/* ===== V53 — Recherche : feuille stable + résultats seuls scrollables ===== */
+
+/* La feuille de recherche garde une vraie zone de contexte visible au-dessus
+   lorsque le clavier est ouvert. */
+#searchModal .modal-panel{
+  display:flex !important;
+  flex-direction:column !important;
+
+  /* On laisse environ 185 px de l'application visibles au-dessus.
+     Le bas reste collé juste au-dessus du clavier. */
+  height:calc(var(--keyboard-visible-height, 100svh) - 185px) !important;
+  max-height:calc(var(--keyboard-visible-height, 100svh) - 185px) !important;
+
+  overflow:hidden !important;
+  box-sizing:border-box;
+}
+
+/* Le titre, le champ et les filtres restent fixes dans la feuille. */
+#searchModal .modal-head,
+#searchModal #searchInput,
+#searchModal #searchFilters{
+  flex:0 0 auto;
+}
+
+/* Seule la liste de résultats défile. */
+#searchResults{
+  flex:1 1 auto !important;
+  min-height:0 !important;
+  overflow-y:auto !important;
+  overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
+  padding-bottom:max(18px, env(safe-area-inset-bottom));
+}
+
+/* Quand le clavier n'est pas présent, on conserve une hauteur raisonnable
+   sans transformer Recherche en plein écran. */
+@media (min-height:700px){
+  #searchModal .modal-panel{
+    height:min(68svh, calc(var(--keyboard-visible-height, 100svh) - 185px)) !important;
+    max-height:min(68svh, calc(var(--keyboard-visible-height, 100svh) - 185px)) !important;
+  }
+}
+
+
+/* ===== V54 — Recherche ancrée au sommet réel des cartes ===== */
+
+#searchModal{
+  padding-bottom:0 !important;
+}
+
+/* Le bord supérieur ne bouge plus.
+   Seul le bord inférieur suit l'ouverture/fermeture du clavier. */
+#searchModal .modal-panel{
+  position:absolute !important;
+  left:50% !important;
+  transform:translateX(-50%) translateY(100%) !important;
+
+  top:var(--search-panel-top, 300px) !important;
+  bottom:var(--keyboard-inset, 0px) !important;
+
+  width:min(100%,430px) !important;
+  height:auto !important;
+  max-height:none !important;
+
+  display:flex !important;
+  flex-direction:column !important;
+  overflow:hidden !important;
+  box-sizing:border-box;
+}
+
+#searchModal.open .modal-panel{
+  transform:translateX(-50%) translateY(0) !important;
+}
+
+/* Le titre, le champ et les filtres restent fixes. */
+#searchModal .modal-head,
+#searchModal .search-field,
+#searchModal .search-filters{
+  flex:0 0 auto !important;
+}
+
+/* Seuls les bandeaux défilent. */
+#searchResults{
+  flex:1 1 auto !important;
+  min-height:0 !important;
+  overflow-y:auto !important;
+  overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
+  padding-bottom:max(18px, env(safe-area-inset-bottom));
+}
+
+/* Neutralise l'ancien calcul V53, y compris son media query. */
+@media (min-height:700px){
+  #searchModal .modal-panel{
+    top:var(--search-panel-top, 300px) !important;
+    bottom:var(--keyboard-inset, 0px) !important;
+    height:auto !important;
+    max-height:none !important;
+  }
+}
+
+
+/* ===== V55 — Recherche : fond blanc limité au haut + fondu sous les filtres ===== */
+
+/* Plus de grand panneau blanc jusqu'au clavier. */
+#searchModal .modal-panel{
+  background:transparent !important;
+  isolation:isolate;
+}
+
+/* Le blanc couvre le haut de Recherche puis disparaît juste sous les filtres,
+   dans le même esprit que le fondu utilisé dans les nouvelles. */
+#searchModal .modal-panel::before{
+  content:"";
+  position:absolute;
+  z-index:-1;
+  left:0;
+  right:0;
+  top:0;
+  height:var(--search-fade-height, 245px);
+  border-radius:30px 30px 0 0;
+  pointer-events:none;
+
+  background:linear-gradient(
+    to bottom,
+    rgba(255,255,255,1) 0%,
+    rgba(255,255,255,1) 72%,
+    rgba(255,255,255,.96) 80%,
+    rgba(255,255,255,.72) 88%,
+    rgba(255,255,255,.30) 95%,
+    rgba(255,255,255,0) 100%
+  );
+}
+
+/* Les contrôles restent parfaitement nets au-dessus du fondu. */
+#searchModal .modal-head,
+#searchModal .search-box,
+#searchModal .search-filters{
+  position:relative;
+  z-index:2;
+}
+
+/* La zone des résultats n'a plus de fond blanc propre. */
+#searchResults{
+  position:relative;
+  z-index:1;
+  background:transparent !important;
+}
+
+
+/* ===== V56 — Recherche : aucun vide au-dessus du clavier, aucun fondu gris ===== */
+
+/* La Recherche ne grise plus l'application derrière elle :
+   le fondu reste réellement blanc au lieu de se mélanger à un voile gris. */
+#searchModal{
+  background:transparent !important;
+}
+
+/* Le panneau conserve son ancrage haut, mais ne réserve plus aucune bande
+   vide au-dessus du clavier. */
+#searchModal .modal-panel{
+  padding-bottom:0 !important;
+}
+
+/* Les bandeaux peuvent aller jusqu'au bord supérieur du clavier. */
+#searchResults{
+  padding-bottom:0 !important;
+  margin-bottom:0 !important;
+}
+
+/* Fondu blanc beaucoup plus court : blanc plein jusqu'aux filtres,
+   puis disparition rapide juste dessous, sans zone grisâtre intermédiaire. */
+#searchModal .modal-panel::before{
+  background:linear-gradient(
+    to bottom,
+    rgba(255,255,255,1) 0%,
+    rgba(255,255,255,1) 82%,
+    rgba(255,255,255,.98) 88%,
+    rgba(255,255,255,.88) 92%,
+    rgba(255,255,255,.55) 96%,
+    rgba(255,255,255,0) 100%
+  ) !important;
+}
+
+
+/* ===== V57 — rétablit uniquement le voile gris de fond ===== */
+
+/* Le voile gris derrière la feuille Recherche est indispensable
+   pour détacher l'écran secondaire de l'écran principal. */
+#searchModal{
+  background:rgba(0,0,0,.22) !important;
+}
+
+/* On conserve en revanche la correction V56 :
+   aucun espace réservé entre le dernier bandeau et le clavier. */
+#searchModal .modal-panel{
+  padding-bottom:0 !important;
+}
+#searchResults{
+  padding-bottom:0 !important;
+  margin-bottom:0 !important;
+}
+
+
+/* ===== V58 — voile gris extérieur, feuille Recherche blanche ===== */
+
+/* Le voile gris reste uniquement derrière la fenêtre secondaire. */
+#searchModal{
+  background:rgba(0,0,0,.22) !important;
+}
+
+/* La feuille Recherche elle-même reste entièrement blanche jusqu'au clavier. */
+#searchModal .modal-panel{
+  background:#fff !important;
+  padding-bottom:0 !important;
+}
+
+/* Aucun gris ni transparence derrière les bandeaux. */
+#searchResults{
+  background:#fff !important;
+  padding-bottom:0 !important;
+  margin-bottom:0 !important;
+}
+
+/* La zone haute reste blanche et les bandeaux peuvent défiler dessous.
+   On conserve un fondu blanc court sous les filtres, dans l'esprit du lecteur. */
+#searchModal .modal-panel::before{
+  z-index:3 !important;
+  background:linear-gradient(
+    to bottom,
+    rgba(255,255,255,1) 0%,
+    rgba(255,255,255,1) 84%,
+    rgba(255,255,255,.96) 90%,
+    rgba(255,255,255,.70) 95%,
+    rgba(255,255,255,0) 100%
+  ) !important;
+  pointer-events:none;
+}
+
+/* Les contrôles restent au-dessus du fondu. */
+#searchModal .modal-head,
+#searchModal .search-box,
+#searchModal .search-filters{
+  position:relative;
+  z-index:4 !important;
+  background:#fff;
+}
+
+/* Les bandeaux passent bien derrière la zone des filtres pendant le scroll. */
+#searchResults{
+  position:relative;
+  z-index:1 !important;
+}
+
 </style>
 </head>
 <body>
@@ -3835,10 +4090,6 @@ document.getElementById("dismissedBtn").addEventListener("click",()=>{
 });
 
 /* -------------------- SEARCH -------------------- */
-document.getElementById("searchBtn")?.addEventListener("click",()=>{
-  resetSearchUI();
-  document.getElementById("searchModal").classList.add("open");
-});
 function renderSearchResults(query){
   const box=document.getElementById("searchResults");
   if(!box)return;
@@ -3884,12 +4135,60 @@ function renderSearchResults(query){
     openReader(idx,STORIES[idx]);
   }));
 }
+function updateSearchFadeHeight(){
+  const panel=document.querySelector("#searchModal .modal-panel");
+  const filters=document.getElementById("searchFilters");
+  if(!panel || !filters)return;
+
+  const panelRect=panel.getBoundingClientRect();
+  const filtersRect=filters.getBoundingClientRect();
+
+  /* Le fondu s'achève environ 30 px sous les onglets. */
+  const height=Math.max(
+    190,
+    Math.round(filtersRect.bottom-panelRect.top+16)
+  );
+
+  document.documentElement.style.setProperty("--search-fade-height",height+"px");
+}
+
+function setSearchPanelTopFromCards(){
+  const cards=[
+    document.getElementById("backLeft"),
+    document.getElementById("backRight"),
+    document.getElementById("storyCard")
+  ].filter(Boolean);
+
+  const rects=cards
+    .map(el=>el.getBoundingClientRect())
+    .filter(r=>r.width>0 && r.height>0);
+
+  if(!rects.length)return;
+
+  /* Bord supérieur exactement calé sur le coin le plus haut
+     du paquet de cartes visible derrière. */
+  const top=Math.floor(Math.min(...rects.map(r=>r.top)));
+  document.documentElement.style.setProperty("--search-panel-top",top+"px");
+}
+
 document.getElementById("searchBtn").addEventListener("click",()=>{
   const modal=document.getElementById("searchModal");
+
+  /* Très important : mesure faite AVANT le focus et donc avant
+     l'apparition du clavier. */
+  setSearchPanelTopFromCards();
+
+  resetSearchUI();
   modal.style.visibility="";
   modal.classList.add("open");
   renderSearchResults(searchInputEl.value);
-  setTimeout(()=>searchInputEl.focus(),180);
+
+  requestAnimationFrame(updateSearchFadeHeight);
+  setTimeout(updateSearchFadeHeight,80);
+  setTimeout(()=>{
+    searchInputEl.focus();
+    updateSearchFadeHeight();
+  },180);
 });
 searchInputEl.addEventListener("input",()=>renderSearchResults(searchInputEl.value));
 searchInputEl.addEventListener("search",()=>renderSearchResults(searchInputEl.value));
@@ -4363,6 +4662,11 @@ try{
 }catch(e){
   console.warn("Realtime interactions indisponible :",e);
 }
+
+
+window.addEventListener("orientationchange",()=>{
+  setTimeout(updateSearchFadeHeight,180);
+},{passive:true});
 
 </script>
 </body>
