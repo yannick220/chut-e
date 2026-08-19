@@ -494,9 +494,13 @@ svg { display:block; width:100%; height:100%; fill:currentColor; }
 }
 .story-scroll-single::-webkit-scrollbar{display:none}
 
+.story-card.expanded .story-scroll-single,
+.story-card.expanding .story-scroll-single{
+  padding:51px 31px 128px;
+}
+
 .story-card.expanded .story-scroll-single{
   overflow-y:auto;
-  padding:51px 31px 128px;
   touch-action:pan-y;
 }
 
@@ -1573,12 +1577,17 @@ svg { display:block; width:100%; height:100%; fill:currentColor; }
 /* ===== V24 — titre flottant corrigé ===== */
 
 /* Le titre reste fixe dans la zone de lecture. */
-.story-card.expanded .story-title-single{
+.story-card.expanded .story-title-single,
+.story-card.expanding .story-title-single{
   position:sticky !important;
   top:0 !important;
   z-index:40 !important;
+
+  /* Même géométrie verticale que sur la carte fermée :
+     aucun décalage du titre ni du premier paragraphe à l'ouverture. */
   margin:0 !important;
-  padding:28px 0 20px !important;
+  padding:0 0 25px !important;
+
   background:#fff !important;
   border:0 !important;
   box-shadow:none !important;
@@ -1587,7 +1596,8 @@ svg { display:block; width:100%; height:100%; fill:currentColor; }
 
 /* Zone blanche opaque AU-DESSUS du titre :
    elle masque complètement le texte qui continue à défiler derrière. */
-.story-card.expanded .story-title-single::before{
+.story-card.expanded .story-title-single::before,
+.story-card.expanding .story-title-single::before{
   content:"";
   position:absolute;
   left:-16px;
@@ -1600,7 +1610,8 @@ svg { display:block; width:100%; height:100%; fill:currentColor; }
 }
 
 /* Sous le titre : flou progressif sans barre ni bord net. */
-.story-card.expanded .story-title-single::after{
+.story-card.expanded .story-title-single::after,
+.story-card.expanding .story-title-single::after{
   content:"";
   position:absolute;
   left:-16px;
@@ -1642,14 +1653,16 @@ svg { display:block; width:100%; height:100%; fill:currentColor; }
 
 /* Suppression de l'ancien fondu supérieur susceptible de créer
    une bande grise ou de laisser réapparaître du texte au-dessus. */
-.story-card.expanded .expanded-fade-top{
+.story-card.expanded .expanded-fade-top,
+.story-card.expanding .expanded-fade-top{
   display:none !important;
 }
 
 /* Aucun séparateur sous le titre. */
 .story-card.expanded .story-title-single,
 .story-card.expanded .story-title-single::before,
-.story-card.expanded .story-title-single::after{
+.story-card.expanded .story-title-single::after,
+.story-card.expanding .story-title-single::after{
   border:none !important;
   outline:none !important;
   box-shadow:none !important;
@@ -1657,7 +1670,8 @@ svg { display:block; width:100%; height:100%; fill:currentColor; }
 
 /* Fallback : simple fondu blanc si backdrop-filter n'est pas disponible. */
 @supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
-  .story-card.expanded .story-title-single::after{
+  .story-card.expanded .story-title-single::after,
+.story-card.expanding .story-title-single::after{
     -webkit-backdrop-filter:none;
     backdrop-filter:none;
     background:linear-gradient(
@@ -2062,9 +2076,11 @@ svg { display:block; width:100%; height:100%; fill:currentColor; }
 }
 
 
-/* ===== V40 — texte et fondu remontés ensemble ===== */
+/* ===== V40 corrigé — même géométrie pendant et après l'ouverture ===== */
 
-/* Le texte revient environ une ligne plus haut. */
+/* Cette marge existait seulement en .expanded, donc elle s'ajoutait brutalement
+   à la fin des 420 ms d'ouverture. On l'applique dès .expanding. */
+.story-card.expanding .story-body-single,
 .story-card.expanded .story-body-single{
   padding-top:34px !important;
 }
@@ -2497,6 +2513,35 @@ html, body{
 #searchResults{
   position:relative;
   z-index:1 !important;
+}
+
+
+/* ===== V59 — titre et texte figés sur leurs niveaux de la carte ===== */
+.story-card.expanding .story-scroll-single,
+.story-card.expanded .story-scroll-single{
+  padding-top:var(--reader-content-top,51px) !important;
+}
+
+.story-card.expanding .story-title-single,
+.story-card.expanded .story-title-single{
+  padding-bottom:var(--reader-title-gap,25px) !important;
+}
+
+
+/* ===== V60 — verrouillage de géométrie à la fin de l'ouverture ===== */
+.story-card.expanding .story-title-single,
+.story-card.expanded .story-title-single{
+  font-size:31px !important;
+  line-height:1.03 !important;
+  letter-spacing:-1.3px !important;
+  font-weight:800 !important;
+}
+
+.story-card.expanding .story-body-single,
+.story-card.expanded .story-body-single{
+  font-size:16.5px !important;
+  line-height:1.40 !important;
+  letter-spacing:-.24px !important;
 }
 
 </style>
@@ -3543,6 +3588,16 @@ async function openReader(index=current,storyOverride=null){
   applyReadingStateToActions(s);
 
   const start=card.getBoundingClientRect();
+
+  /* On mémorise les positions VISUELLES exactes du titre et du premier
+     paragraphe sur la carte fermée. Elles servent ensuite de référence
+     à la lecture, indépendamment du scale responsive de l'accueil. */
+  const titleBefore=card.querySelector(".story-title-single")?.getBoundingClientRect();
+  const firstParagraphBefore=card.querySelector("#storyTextOnly > p")?.getBoundingClientRect();
+
+  const titleTopBefore=titleBefore ? titleBefore.top-start.top : 51;
+  const paragraphTopBefore=firstParagraphBefore ? firstParagraphBefore.top-start.top : null;
+
   const appRect=document.getElementById("app").getBoundingClientRect();
   const targetTop=Math.max(154,appRect.top+154);
   const targetLeft=appRect.left;
@@ -3560,6 +3615,29 @@ async function openReader(index=current,storyOverride=null){
   card.style.borderRadius="31px";
   card.style.transform="none";
   card.style.opacity="1";
+
+  /* Géométrie interne : aucune approximation en pixels fixes.
+     Le titre reprend exactement son niveau relatif de la carte fermée. */
+  card.style.setProperty("--reader-content-top",Math.max(0,titleTopBefore)+"px");
+
+  const titleNow=card.querySelector(".story-title-single");
+  if(titleNow){
+    /* On mesure d'abord le titre sans espace inférieur, puis on recrée
+       exactement la distance qui séparait le titre du premier paragraphe
+       sur la carte. Cela supprime le saut même pour un titre d'une ligne. */
+    card.style.setProperty("--reader-title-gap","0px");
+
+    const titleHeightNow=titleNow.getBoundingClientRect().height;
+    if(paragraphTopBefore!==null){
+      const wantedGap=Math.max(
+        0,
+        paragraphTopBefore-titleTopBefore-titleHeightNow
+      );
+      card.style.setProperty("--reader-title-gap",wantedGap+"px");
+    }else{
+      card.style.setProperty("--reader-title-gap","25px");
+    }
+  }
 
   document.getElementById("app").classList.add("reading");
   reader.classList.remove("closing");
