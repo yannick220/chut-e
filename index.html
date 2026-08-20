@@ -2819,6 +2819,245 @@ html, body{
   }
 }
 
+
+/* ===== V67 — la nouvelle se comporte comme les autres fenêtres secondaires ===== */
+
+/* Les commandes du haut restent visibles sous le voile gris pendant la lecture.
+   Elles ne sont simplement pas cliquables tant que la nouvelle est ouverte. */
+.app.reading .shuffle-btn,
+.app.reading .search-btn{
+  opacity:1 !important;
+  transform:none !important;
+  pointer-events:none !important;
+}
+
+/* Le titre reste lui aussi visible sous le même voile. */
+.app.reading .brand{
+  opacity:1 !important;
+}
+
+/* Le voile du lecteur est identique aux autres écrans secondaires. */
+.reader-backdrop{
+  background:rgba(0,0,0,.22) !important;
+  opacity:0 !important;
+  transition:opacity .34s ease !important;
+}
+
+.reader-overlay.open .reader-backdrop{
+  opacity:1 !important;
+}
+
+.reader-overlay.closing .reader-backdrop{
+  opacity:0 !important;
+}
+
+
+/* ===== V68 — aperçu : aucune ligne de texte coupée ===== */
+.story-card:not(.expanded):not(.expanding):not(.collapsing) .story-body-single{
+  overflow:hidden !important;
+}
+
+
+/* ===== V69 — « Lire plus » intégré à la dernière ligne ===== */
+
+.story-card:not(.expanded):not(.expanding):not(.collapsing) .read-more-single{
+  display:none !important;
+}
+
+/* Plus de zone spécifique réservée au bouton Lire plus séparé.
+   On garde en revanche une vraie respiration avant les métadonnées. */
+.story-card:not(.expanded):not(.expanding):not(.collapsing) .story-scroll-single{
+  bottom:72px !important;
+  padding:51px 31px 0 !important;
+  overflow:hidden !important;
+}
+
+.story-card:not(.expanded):not(.expanding):not(.collapsing) .story-body-single{
+  max-height:none !important;
+  overflow:hidden !important;
+}
+
+.compact-read-more-inline{
+  display:inline !important;
+  border:0;
+  background:transparent;
+  padding:0;
+  margin:0 0 0 .22em;
+  font:inherit;
+  font-weight:800;
+  color:inherit;
+  cursor:pointer;
+  white-space:nowrap;
+  -webkit-tap-highlight-color:transparent;
+}
+
+/* Un peu plus d'air entre la fin du synopsis et la ligne de métadonnées. */
+.card-meta-single{
+  bottom:25px !important;
+}
+
+/* Aucun ancien fondu n'intervient dans l'aperçu. */
+.story-card:not(.expanded) .compact-fade{
+  display:none !important;
+}
+
+
+/* V7.1 — métadonnées de la carte sur deux lignes.
+   Ligne 1 : interactions. Ligne 2 : longueur + position.
+   Mots et temps de lecture restent inséparables. */
+.story-card:not(.expanded) .card-meta-single{
+  left:31px !important;
+  right:31px !important;
+  bottom:24px !important;
+  display:flex !important;
+  flex-direction:column !important;
+  align-items:stretch !important;
+  justify-content:flex-end !important;
+  gap:5px !important;
+  line-height:1.15 !important;
+}
+.card-meta-single .card-meta-row{
+  display:flex;
+  align-items:center;
+  min-width:0;
+}
+.card-meta-single .card-meta-interactions{
+  justify-content:flex-start;
+  gap:13px;
+}
+.card-meta-single .card-meta-reading{
+  justify-content:space-between;
+  gap:12px;
+}
+.card-meta-single .card-length{
+  white-space:nowrap;
+}
+.card-meta-single .card-position-counter{
+  margin-left:auto;
+  white-space:nowrap;
+  flex:0 0 auto;
+}
+
+
+/* V7.2 — pied de carte sur une seule ligne ; numéro de carte en haut à droite. */
+.story-card:not(.expanded) .card-meta-single{
+  left:31px !important;
+  right:31px !important;
+  bottom:27px !important;
+  display:flex !important;
+  flex-direction:row !important;
+  align-items:center !important;
+  justify-content:flex-start !important;
+  gap:12px !important;
+  line-height:1.15 !important;
+  white-space:nowrap;
+}
+.card-meta-single .card-length{
+  white-space:nowrap;
+}
+.card-position-top{
+  position:absolute;
+  top:27px;
+  right:27px;
+  z-index:10;
+  font-size:12px;
+  font-weight:700;
+  letter-spacing:.2px;
+  color:rgba(0,0,0,.34);
+  white-space:nowrap;
+}
+.story-card.expanding .card-position-top,
+.story-card.expanded .card-position-top,
+.story-card.collapsing .card-position-top{
+  opacity:0;
+  pointer-events:none;
+}
+
+
+/* ===== V7.3 — quatre informations réparties sur toute la ligne ===== */
+.story-card:not(.expanded) .card-meta-single{
+  left:31px !important;
+  right:31px !important;
+  bottom:27px !important;
+  display:grid !important;
+  grid-template-columns:auto auto 1fr auto !important;
+  align-items:center !important;
+  column-gap:0 !important;
+  width:auto !important;
+  white-space:nowrap;
+}
+
+.card-meta-single .card-meta-item{
+  min-width:0;
+}
+
+.card-meta-single .card-meta-like{
+  justify-self:start;
+}
+
+.card-meta-single .card-comments-meta{
+  justify-self:center;
+}
+
+/* Les mots et le temps restent visuellement liés dans la moitié droite,
+   mais profitent de toute la largeur disponible. */
+.card-meta-single .card-meta-words{
+  justify-self:end;
+  padding-right:12px;
+}
+
+.card-meta-single .card-meta-time{
+  justify-self:end;
+}
+
+/* ===== V7.4 — retour de lecture : réapparition douce des éléments de carte ===== */
+.card-meta-single,
+.card-position-top,
+.compact-read-more-inline{
+  transition:opacity .28s ease !important;
+}
+
+.story-card.compact-restoring .card-meta-single,
+.story-card.compact-restoring .card-position-top,
+.story-card.compact-restoring .compact-read-more-inline{
+  opacity:0 !important;
+}
+
+.story-card.compact-restored .card-meta-single,
+.story-card.compact-restored .card-position-top,
+.story-card.compact-restored .compact-read-more-inline{
+  opacity:1 !important;
+}
+
+
+/* ===== V7.5 — espacement strictement égal entre les 4 informations ===== */
+.story-card:not(.expanded) .card-meta-single{
+  display:grid !important;
+  grid-template-columns:repeat(4, max-content) !important;
+  justify-content:space-between !important;
+  align-items:center !important;
+  column-gap:0 !important;
+}
+
+.card-meta-single .card-meta-like,
+.card-meta-single .card-comments-meta,
+.card-meta-single .card-meta-words,
+.card-meta-single .card-meta-time{
+  justify-self:auto !important;
+  padding-left:0 !important;
+  padding-right:0 !important;
+  margin-left:0 !important;
+  margin-right:0 !important;
+  white-space:nowrap;
+}
+
+
+/* ===== V7.6 — « … Lire plus » plus discret ===== */
+.compact-read-more-inline{
+  font-size:.88em !important;
+  letter-spacing:-.12px !important;
+}
+
 </style>
 </head>
 <body>
@@ -3634,17 +3873,18 @@ function storyCardHTML(s){
     <div class="compact-fade"></div>
     <button class="read-more-single" id="readMore">(Lire plus)</button>
 
+    <span class="card-position-counter card-position-top" id="cardPositionCounter"></span>
+
     <div class="card-meta-single">
-      <span>♡ <b id="cardLikes">${getDisplayedLikes(s)}</b></span>
-      <span class="card-comments-meta">
+      <span class="card-meta-item card-meta-like">♡ <b id="cardLikes">${getDisplayedLikes(s)}</b></span>
+      <span class="card-meta-item card-comments-meta">
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <path d="M5 5.5h14v10H9l-4 3v-13Z"></path>
         </svg>
         <b id="cardComments">${getDisplayedComments(s)}</b>
       </span>
-      <span>${s.words} mots</span>
-      <span>${s.minutes} min</span>
-      <span class="card-position-counter" id="cardPositionCounter"></span>
+      <span class="card-meta-item card-meta-words">${s.words} mots</span>
+      <span class="card-meta-item card-meta-time">${s.minutes} min</span>
     </div>
 
 
@@ -3653,6 +3893,165 @@ function storyCardHTML(s){
       <div class="read-progress-bar" id="readProgressBar"></div>
     </div>
   `;
+}
+
+
+function restoreFullStoryText(story=currentStory()){
+  const text=card.querySelector("#storyTextOnly");
+  if(!text || !story)return;
+  text.innerHTML=story.body
+    .map((p,i)=>`<p data-reading-paragraph="${i}">${escapeHTML(p).replace(/\n/g,"<br>")}</p>`)
+    .join("");
+}
+
+function renderCompactWords(story,wordLimit){
+  const text=card.querySelector("#storyTextOnly");
+  if(!text || !story)return null;
+
+  let remaining=wordLimit;
+  let htmlParts=[];
+  let truncated=false;
+
+  for(let i=0;i<story.body.length;i++){
+    const words=String(story.body[i]||"").trim().split(/\s+/).filter(Boolean);
+    if(!words.length)continue;
+
+    if(remaining>=words.length){
+      htmlParts.push(`<p data-reading-paragraph="${i}">${escapeHTML(words.join(" "))}</p>`);
+      remaining-=words.length;
+    }else{
+      const kept=words.slice(0,Math.max(0,remaining));
+      if(kept.length){
+        let excerpt=kept.join(" ");
+
+        /* La coupure ne doit jamais donner « mot, … Lire plus »,
+           « mot. … Lire plus », etc. On retire uniquement la ponctuation
+           terminale de l'extrait jusqu'à ce que le dernier caractère visible
+           soit une lettre. Le texte intégral n'est évidemment pas modifié. */
+        excerpt=excerpt.replace(/[^A-Za-zÀ-ÖØ-öø-ÿŒœÆæ]+$/u,"");
+
+        /* Cas rarissime où le dernier token ne contenait aucune lettre :
+           on remonte mot par mot jusqu'à une vraie terminaison alphabétique. */
+        while(!/[A-Za-zÀ-ÖØ-öø-ÿŒœÆæ]$/u.test(excerpt) && kept.length>1){
+          kept.pop();
+          excerpt=kept.join(" ").replace(/[^A-Za-zÀ-ÖØ-öø-ÿŒœÆæ]+$/u,"");
+        }
+
+        htmlParts.push(`<p data-reading-paragraph="${i}">${escapeHTML(excerpt)}<button class="compact-read-more-inline" type="button"> … Lire plus</button></p>`);
+      }else if(htmlParts.length){
+        htmlParts[htmlParts.length-1]=htmlParts[htmlParts.length-1]
+          .replace(/([^A-Za-zÀ-ÖØ-öø-ÿŒœÆæ<]+)(<\/p>)$/u,"$2")
+          .replace(
+            /<\/p>$/,
+            '<button class="compact-read-more-inline" type="button"> … Lire plus</button></p>'
+          );
+      }
+      truncated=true;
+      break;
+    }
+  }
+
+  if(!truncated){
+    const totalWords=story.body.reduce((n,p)=>n+String(p||"").trim().split(/\s+/).filter(Boolean).length,0);
+    truncated=wordLimit<totalWords;
+  }
+
+  text.innerHTML=htmlParts.join("");
+  return text.querySelector(".compact-read-more-inline");
+}
+
+function compactPreviewFitsVertically(){
+  const sc=card.querySelector("#storyScrollSingle");
+  const text=card.querySelector("#storyTextOnly");
+  const more=text?.querySelector(".compact-read-more-inline");
+  if(!sc || !text || !more)return false;
+
+  /* Même limite basse pour toutes les cartes : on remplit l'espace disponible
+     jusqu'à une zone de respiration fixe au-dessus des métadonnées. */
+  const limit=sc.getBoundingClientRect().bottom-10;
+  return more.getBoundingClientRect().bottom<=limit+0.5;
+}
+
+function compactReadMoreIsInline(){
+  const text=card.querySelector("#storyTextOnly");
+  const more=text?.querySelector(".compact-read-more-inline");
+  const p=more?.closest("p");
+  if(!more || !p)return false;
+
+  /* On regarde le dernier rectangle de texte avant le bouton.
+     La comparaison se fait sur le centre vertical, beaucoup plus fiable
+     que la coordonnée top d'un <button> inline sur Android. */
+  const nodes=[...p.childNodes];
+  const buttonIndex=nodes.indexOf(more);
+  const before=nodes.slice(0,buttonIndex).filter(n=>n.nodeType===Node.TEXT_NODE && n.nodeValue.trim());
+  const node=before[before.length-1];
+  if(!node)return true;
+
+  const range=document.createRange();
+  range.selectNodeContents(node);
+  const rects=[...range.getClientRects()].filter(r=>r.width>0 && r.height>0);
+  range.detach?.();
+  if(!rects.length)return true;
+
+  const tr=rects[rects.length-1];
+  const br=more.getBoundingClientRect();
+  const textCenter=tr.top+tr.height/2;
+  const buttonCenter=br.top+br.height/2;
+  return Math.abs(textCenter-buttonCenter)<8;
+}
+
+function fitCompactPreviewToWholeLines(){
+  if(!card || card.classList.contains("expanded") || card.classList.contains("expanding") || card.classList.contains("collapsing"))return;
+
+  const story=currentStory();
+  if(!story)return;
+
+  const totalWords=story.body.reduce(
+    (n,p)=>n+String(p||"").trim().split(/\s+/).filter(Boolean).length,
+    0
+  );
+  if(totalWords<2)return;
+
+  /* 1. Chercher le maximum de mots qui remplit VERTICALEMENT la carte.
+     Cette condition est monotone et évite les coupes aberrantes à 1 ou 2 mots. */
+  let low=1;
+  let high=totalWords-1;
+  let best=1;
+
+  while(low<=high){
+    const mid=Math.floor((low+high)/2);
+    renderCompactWords(story,mid);
+
+    if(compactPreviewFitsVertically()){
+      best=mid;
+      low=mid+1;
+    }else{
+      high=mid-1;
+    }
+  }
+
+  /* 2. À partir du synopsis le plus long possible, retirer seulement
+     les quelques mots nécessaires pour remettre « … Lire plus »
+     sur la même ligne que le texte. */
+  let candidate=best;
+  let inline=null;
+
+  while(candidate>1){
+    inline=renderCompactWords(story,candidate);
+    if(compactPreviewFitsVertically() && compactReadMoreIsInline())break;
+    candidate--;
+  }
+
+  inline=renderCompactWords(story,candidate);
+  if(inline){
+    inline.addEventListener("click",e=>{
+      e.preventDefault();
+      e.stopPropagation();
+      restoreFullStoryText(story);
+      storyReturnTarget="home";
+      openReader();
+    });
+  }
 }
 
 function renderCard(animate=true){
@@ -3671,17 +4070,14 @@ function renderCard(animate=true){
     }));
   }
 
-  const more=document.getElementById("readMore");
-  if(more){
-    more.addEventListener("click",e=>{
-      e.stopPropagation();
-      storyReturnTarget="home";
-      openReader();
-    });
-  }
 
   bindExpandedScroll();
   updateLikeButton();
+
+  requestAnimationFrame(()=>{
+    fitCompactPreviewToWholeLines();
+    requestAnimationFrame(fitCompactPreviewToWholeLines);
+  });
 }
 
 function updateInteractionCounters(){
@@ -3843,6 +4239,11 @@ function bindExpandedScroll(){
 }
 
 async function openReader(index=current,storyOverride=null){
+  if(!storyOverride)restoreFullStoryText(currentStory());
+
+  /* Même référence verticale que Recherche / Bibliothèque / Archives. */
+  ensureSharedPanelTop();
+
   if(storyOverride){
     readerStoryOverride=storyOverride;
     card.innerHTML=storyCardHTML(storyOverride);
@@ -3874,10 +4275,19 @@ async function openReader(index=current,storyOverride=null){
   const paragraphTopBefore=firstParagraphBefore ? firstParagraphBefore.top-start.top : null;
 
   const appRect=document.getElementById("app").getBoundingClientRect();
-  const targetTop=Math.max(154,appRect.top+154);
+
+  /* La nouvelle s'ouvre exactement au même niveau supérieur que Recherche. */
+  const sharedTopRaw=getComputedStyle(document.documentElement)
+    .getPropertyValue("--search-panel-top")
+    .trim();
+  const sharedTop=parseFloat(sharedTopRaw);
+  const targetTop=Number.isFinite(sharedTop)
+    ? Math.max(appRect.top,sharedTop)
+    : Math.max(appRect.top,154);
+
   const targetLeft=appRect.left;
   const targetWidth=appRect.width;
-  const targetHeight=window.innerHeight-targetTop;
+  const targetHeight=Math.max(1,window.innerHeight-targetTop);
 
   /* La carte doit partager le même contexte d'empilement que le voile et les actions. */
   reader.insertBefore(card, readerActions);
@@ -4029,7 +4439,20 @@ function finalizeCloseReader(){
 
     const returnTarget=storyReturnTarget;
     readerStoryOverride=null;
+
+    /* Le contenu compact est recréé invisible, puis révélé en fondu.
+       Cela évite l'apparition brutale de Lire plus, métadonnées et compteur. */
+    card.classList.add("compact-restoring");
     renderCard(false);
+
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{
+      card.classList.remove("compact-restoring");
+      card.classList.add("compact-restored");
+
+      setTimeout(()=>{
+        card.classList.remove("compact-restored");
+      },320);
+    }));
 
     if(returnTarget==="library"){
       renderLibrary();
@@ -5029,6 +5452,11 @@ try{
 
 window.addEventListener("orientationchange",()=>{
   setTimeout(updateSearchFadeHeight,180);
+},{passive:true});
+
+
+window.addEventListener("resize",()=>{
+  requestAnimationFrame(fitCompactPreviewToWholeLines);
 },{passive:true});
 
 </script>
