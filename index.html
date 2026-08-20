@@ -3058,6 +3058,359 @@ html, body{
   letter-spacing:-.12px !important;
 }
 
+
+/* ===== V72 — morphing réel du bandeau vers le lecteur ===== */
+.reader-list-morph{
+  position:fixed;
+  z-index:10000;
+  overflow:hidden;
+  box-sizing:border-box;
+  pointer-events:none;
+  background:#dedede;
+  border-radius:18px;
+  transition:
+    left .42s cubic-bezier(.2,.82,.2,1),
+    top .42s cubic-bezier(.2,.82,.2,1),
+    width .42s cubic-bezier(.2,.82,.2,1),
+    height .42s cubic-bezier(.2,.82,.2,1),
+    border-radius .42s cubic-bezier(.2,.82,.2,1),
+    background-color .42s ease;
+}
+
+.reader-list-morph-title{
+  position:absolute;
+  margin:0;
+  padding:0;
+  font-weight:800;
+  white-space:normal;
+  overflow:hidden;
+  transform-origin:left top;
+  transition:
+    left .42s cubic-bezier(.2,.82,.2,1),
+    top .42s cubic-bezier(.2,.82,.2,1),
+    width .42s cubic-bezier(.2,.82,.2,1),
+    font-size .42s cubic-bezier(.2,.82,.2,1),
+    line-height .42s cubic-bezier(.2,.82,.2,1),
+    letter-spacing .42s cubic-bezier(.2,.82,.2,1),
+    color .42s ease;
+}
+
+.reader-list-morph-meta{
+  position:absolute;
+  left:18px;
+  right:18px;
+  bottom:12px;
+  font-size:11px;
+  font-weight:700;
+  opacity:.72;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  transition:opacity .18s ease;
+}
+
+.reader-list-morph.expanding .reader-list-morph-meta{
+  opacity:0;
+}
+
+/* Le bandeau source garde sa place dans la liste, mais disparaît visuellement. */
+.morph-source-row{
+  opacity:0 !important;
+}
+
+/* Le vrai lecteur attend derrière le morph jusqu'au dernier instant. */
+.story-card.reader-awaiting-morph{
+  opacity:0 !important;
+  pointer-events:none !important;
+}
+
+
+/* ===== V74 — les cartes de fond restent totalement fixes pendant le morphing ===== */
+.reader-card-placeholder{
+  pointer-events:none !important;
+  user-select:none !important;
+  transition:none !important;
+  animation:none !important;
+}
+
+/* Le passage en mode lecture ne doit pas altérer visuellement
+   le placeholder de la carte centrale. */
+.app.reading .reader-card-placeholder{
+  opacity:1 !important;
+  transform:none !important;
+  visibility:visible !important;
+}
+
+
+/* ===== V75 — ouverture bandeau → lecteur plus lisible ===== */
+
+/* Géométrie plus lente : on laisse réellement le temps de voir le bandeau s'étirer. */
+.reader-list-morph:not(.closing-morph){
+  transition:
+    left .60s cubic-bezier(.18,.78,.18,1),
+    top .60s cubic-bezier(.18,.78,.18,1),
+    width .60s cubic-bezier(.18,.78,.18,1),
+    height .60s cubic-bezier(.18,.78,.18,1),
+    border-radius .60s cubic-bezier(.18,.78,.18,1) !important;
+}
+
+/* La couleur ne blanchit pas immédiatement :
+   le bandeau reste visiblement gris pendant le début de l'agrandissement. */
+.reader-list-morph:not(.closing-morph){
+  transition-property:left,top,width,height,border-radius,background-color !important;
+  transition-duration:.60s,.60s,.60s,.60s,.60s,.42s !important;
+  transition-delay:0s,0s,0s,0s,0s,.16s !important;
+  transition-timing-function:
+    cubic-bezier(.18,.78,.18,1),
+    cubic-bezier(.18,.78,.18,1),
+    cubic-bezier(.18,.78,.18,1),
+    cubic-bezier(.18,.78,.18,1),
+    cubic-bezier(.18,.78,.18,1),
+    ease !important;
+}
+
+/* Le titre grossit avec la forme, mais sur un rythme légèrement plus ample. */
+.reader-list-morph:not(.closing-morph) .reader-list-morph-title{
+  transition:
+    left .60s cubic-bezier(.18,.78,.18,1),
+    top .60s cubic-bezier(.18,.78,.18,1),
+    width .60s cubic-bezier(.18,.78,.18,1),
+    font-size .60s cubic-bezier(.18,.78,.18,1),
+    line-height .60s cubic-bezier(.18,.78,.18,1),
+    letter-spacing .60s cubic-bezier(.18,.78,.18,1),
+    color .38s ease .18s !important;
+}
+
+/* Les petites infos du bandeau ne disparaissent pas instantanément :
+   elles accompagnent le début du morphing avant de s'effacer. */
+.reader-list-morph:not(.closing-morph) .reader-list-morph-meta{
+  transition:opacity .24s ease .10s !important;
+}
+
+/* Fermeture : conserver le rythme déjà jugé meilleur. */
+.reader-list-morph.closing-morph{
+  transition:
+    left .42s cubic-bezier(.2,.82,.2,1),
+    top .42s cubic-bezier(.2,.82,.2,1),
+    width .42s cubic-bezier(.2,.82,.2,1),
+    height .42s cubic-bezier(.2,.82,.2,1),
+    border-radius .42s cubic-bezier(.2,.82,.2,1),
+    background-color .42s ease !important;
+}
+.reader-list-morph.closing-morph .reader-list-morph-title{
+  transition:
+    left .42s cubic-bezier(.2,.82,.2,1),
+    top .42s cubic-bezier(.2,.82,.2,1),
+    width .42s cubic-bezier(.2,.82,.2,1),
+    font-size .42s cubic-bezier(.2,.82,.2,1),
+    line-height .42s cubic-bezier(.2,.82,.2,1),
+    letter-spacing .42s cubic-bezier(.2,.82,.2,1),
+    color .42s ease !important;
+}
+
+
+/* ===== V76 — fond gris strictement constant pendant les handoffs ===== */
+
+/* Tant que la fenêtre Bibliothèque / Archives / Recherche est encore visible,
+   c'est ELLE seule qui fournit le voile gris. Le lecteur n'ajoute aucun
+   second voile par-dessus : pas de gris qui s'assombrit ou s'éclaircit. */
+.reader-overlay.list-backdrop-handoff .reader-backdrop{
+  opacity:0 !important;
+  transition:none !important;
+}
+
+/* Au moment exact où la fenêtre source disparaît, le lecteur prend le relais
+   avec la même opacité, sans aucun fondu intermédiaire. */
+.reader-overlay.list-backdrop-fixed .reader-backdrop{
+  opacity:1 !important;
+  transition:none !important;
+}
+
+/* ===== V77 — même hauteur de départ pour toutes les nouvelles ===== */
+.story-card.expanding .story-scroll-single,
+.story-card.expanded .story-scroll-single{
+  padding-top:51px !important;
+}
+
+/* On réserve systématiquement deux lignes de hauteur au titre.
+   Ainsi le premier paragraphe commence exactement au même niveau,
+   que le titre fasse une ou deux lignes. */
+.story-card.expanding .story-title-single,
+.story-card.expanded .story-title-single{
+  height:64px !important;
+  min-height:64px !important;
+  max-height:64px !important;
+  box-sizing:content-box !important;
+  padding-bottom:25px !important;
+  overflow:visible !important;
+}
+
+
+/* ===== V78 — infos du bandeau en fondu + texte de lecture remonté ===== */
+
+/* Pendant la fermeture lecteur -> bandeau, les métadonnées du ghost
+   réapparaissent progressivement, au lieu d'arriver d'un coup à la fin. */
+.reader-list-morph.closing-morph .reader-list-morph-meta{
+  opacity:0;
+  transition:opacity .30s ease .10s !important;
+}
+
+.reader-list-morph.closing-morph.expanding .reader-list-morph-meta{
+  opacity:.72 !important;
+}
+
+/* À l'ouverture bandeau -> lecteur, elles s'effacent aussi progressivement. */
+.reader-list-morph:not(.closing-morph) .reader-list-morph-meta{
+  opacity:.72;
+  transition:opacity .26s ease !important;
+}
+.reader-list-morph:not(.closing-morph).expanding .reader-list-morph-meta{
+  opacity:0 !important;
+}
+
+/* Le texte de la nouvelle était trop bas.
+   On garde le titre au même niveau, mais on réduit fortement
+   l'espace réservé sous lui. */
+.story-card.expanding .story-title-single,
+.story-card.expanded .story-title-single{
+  height:auto !important;
+  min-height:0 !important;
+  max-height:none !important;
+  padding-bottom:12px !important;
+}
+
+/* Le début du contenu remonte également légèrement. */
+.story-card.expanding .story-scroll-single,
+.story-card.expanded .story-scroll-single{
+  padding-top:43px !important;
+}
+
+
+/* ===== V79 — titre stable + Bibliothèque/Archives 100% glissées ===== */
+
+/* Le titre du ghost termine exactement à la géométrie du vrai titre. */
+.reader-list-morph:not(.closing-morph) .reader-list-morph-title{
+  transition:
+    left .60s cubic-bezier(.18,.78,.18,1),
+    top .60s cubic-bezier(.18,.78,.18,1),
+    width .60s cubic-bezier(.18,.78,.18,1),
+    font-size .60s cubic-bezier(.18,.78,.18,1),
+    line-height .60s cubic-bezier(.18,.78,.18,1),
+    letter-spacing .60s cubic-bezier(.18,.78,.18,1),
+    color .60s ease !important;
+}
+
+/* Le vrai titre apparaît sans transition propre au moment du swap :
+   il ne peut donc plus "sauter" sur les derniers pixels. */
+.story-card.reader-awaiting-morph .story-title-single{
+  opacity:0 !important;
+}
+.story-card.expanded .story-title-single{
+  transition:none !important;
+}
+
+/* Bibliothèque et Archives : pas de fondu du panneau lui-même.
+   Elles doivent entrer et sortir uniquement par translation verticale. */
+#libraryModal .modal-panel,
+#dismissedModal .modal-panel{
+  opacity:1 !important;
+  transition:transform .34s cubic-bezier(.2,.82,.2,1) !important;
+  transform:translateY(100%) !important;
+}
+
+#libraryModal.open .modal-panel,
+#dismissedModal.open .modal-panel{
+  transform:translateY(0) !important;
+  opacity:1 !important;
+}
+
+#libraryModal.closing .modal-panel,
+#dismissedModal.closing .modal-panel{
+  transform:translateY(100%) !important;
+  opacity:1 !important;
+}
+
+/* Le voile gris peut continuer à apparaître/disparaître en fondu,
+   mais la feuille blanche, elle, glisse intégralement depuis le bas. */
+#libraryModal,
+#dismissedModal{
+  transition:opacity .34s ease !important;
+}
+
+
+/* ===== V83 — respiration sous le titre + bande blanche sous le timer ===== */
+
+/* Le titre reste exactement à sa place.
+   On prolonge seulement son aplat blanc vers le bas afin que,
+   pendant le scroll, le texte disparaisse un peu plus tôt sous le titre. */
+.story-card.expanded .story-title-single::after,
+.story-card.expanding .story-title-single::after{
+  content:"" !important;
+  display:block !important;
+  position:absolute !important;
+  left:-31px !important;
+  right:-31px !important;
+  top:100% !important;
+  height:18px !important;
+  background:#fff !important;
+  pointer-events:none !important;
+  z-index:-1 !important;
+  -webkit-backdrop-filter:none !important;
+  backdrop-filter:none !important;
+  -webkit-mask-image:none !important;
+  mask-image:none !important;
+}
+
+/* Même principe au bas de la fenêtre :
+   un aplat blanc fixe protège la zone du timer du texte qui défile. */
+.story-card.expanded::after,
+.story-card.expanding::after{
+  content:"";
+  position:absolute;
+  left:0;
+  right:0;
+  bottom:0;
+  height:34px;
+  background:#fff;
+  pointer-events:none;
+  z-index:244;
+}
+
+/* Le timer reste au-dessus de sa bande blanche. */
+.story-card.expanded .read-progress-track,
+.story-card.expanding .read-progress-track{
+  z-index:245 !important;
+}
+
+
+/* ===== V84 — ligne d'infos bandeau : aucune rupture de graisse/taille ===== */
+
+/* Le vrai bandeau et son clone utilisent exactement la même graisse légère. */
+.lib-row small,
+.search-result small,
+.reader-list-morph-meta{
+  font-weight:400 !important;
+}
+
+/* Le vrai bandeau peut réapparaître en douceur au handoff final. */
+.lib-row,
+.search-result{
+  transition:opacity .14s linear !important;
+}
+
+/* Le ghost reste visible jusqu'au cross-fade final. */
+.reader-list-morph.closing-morph.morph-meta-handoff{
+  opacity:0 !important;
+  transition:
+    left .42s cubic-bezier(.2,.82,.2,1),
+    top .42s cubic-bezier(.2,.82,.2,1),
+    width .42s cubic-bezier(.2,.82,.2,1),
+    height .42s cubic-bezier(.2,.82,.2,1),
+    border-radius .42s cubic-bezier(.2,.82,.2,1),
+    background-color .42s ease,
+    opacity .14s linear !important;
+}
+
 </style>
 </head>
 <body>
@@ -3257,6 +3610,209 @@ let current = 0;
 let drag = null;
 let suppressClick = false;
 let storyReturnTarget = "home";
+let listReaderOrigin = null;
+let readerCardPlaceholder = null;
+
+function removeReaderCardPlaceholder(){
+  if(readerCardPlaceholder){
+    readerCardPlaceholder.remove();
+    readerCardPlaceholder=null;
+  }
+}
+
+function createReaderCardPlaceholder(){
+  removeReaderCardPlaceholder();
+
+  if(!card || !deck)return;
+
+  const clone=card.cloneNode(true);
+
+  /* Aucun ID dupliqué : le clone est purement visuel. */
+  clone.removeAttribute("id");
+  clone.querySelectorAll("[id]").forEach(el=>el.removeAttribute("id"));
+
+  clone.classList.remove(
+    "expanded","expanding","collapsing",
+    "reader-awaiting-morph","compact-restoring","compact-restored"
+  );
+  clone.classList.add("reader-card-placeholder");
+
+  clone.style.pointerEvents="none";
+  clone.setAttribute("aria-hidden","true");
+
+  card.insertAdjacentElement("beforebegin",clone);
+  readerCardPlaceholder=clone;
+}
+
+
+function clearListReaderOrigin(){
+  if(listReaderOrigin?.element){
+    listReaderOrigin.element.classList.remove("morph-source-row");
+  }
+  listReaderOrigin=null;
+}
+
+function rememberListReaderOrigin(element,story){
+  clearListReaderOrigin();
+  if(!element || !story)return;
+
+  const r=element.getBoundingClientRect();
+  const titleEl=element.querySelector(".list-story-title") || element.querySelector("strong");
+  const metaEl=element.querySelector("small");
+  const tr=titleEl?.getBoundingClientRect();
+  const ts=titleEl ? getComputedStyle(titleEl) : null;
+  const ms=metaEl ? getComputedStyle(metaEl) : null;
+  const mr=metaEl?.getBoundingClientRect();
+  const es=getComputedStyle(element);
+
+  listReaderOrigin={
+    storyId:String(story.id),
+    element,
+    rect:{left:r.left,top:r.top,width:r.width,height:r.height},
+    background:es.backgroundColor || "#dedede",
+    title:tr ? {
+      left:tr.left-r.left,
+      top:tr.top-r.top,
+      width:tr.width,
+      fontSize:parseFloat(ts.fontSize)||16,
+      lineHeight:parseFloat(ts.lineHeight)||19,
+      letterSpacing:parseFloat(ts.letterSpacing)||0,
+      color:ts.color||"#111"
+    } : null,
+    metaText:metaEl?.textContent?.trim() || "",
+    meta:mr && ms ? {
+      left:mr.left-r.left,
+      top:mr.top-r.top,
+      width:mr.width,
+      fontSize:parseFloat(ms.fontSize)||12,
+      lineHeight:parseFloat(ms.lineHeight)||14,
+      fontWeight:ms.fontWeight||"400",
+      letterSpacing:ms.letterSpacing||"normal",
+      fontFamily:ms.fontFamily||"Montserrat, Arial, sans-serif",
+      color:ms.color||"#777"
+    } : null
+  };
+}
+
+function originModal(){
+  if(storyReturnTarget==="library")return document.getElementById("libraryModal");
+  if(storyReturnTarget==="dismissed")return document.getElementById("dismissedModal");
+  if(storyReturnTarget==="search")return document.getElementById("searchModal");
+  return null;
+}
+
+function createListMorph(story,startRect,targetRect,reverse=false){
+  const origin=listReaderOrigin;
+  if(!origin)return null;
+
+  const ghost=document.createElement("div");
+  ghost.className="reader-list-morph";
+
+  const title=document.createElement("div");
+  title.className="reader-list-morph-title";
+  title.textContent=story.title || "";
+  ghost.appendChild(title);
+
+  const meta=document.createElement("div");
+  meta.className="reader-list-morph-meta";
+  meta.textContent=origin.metaText || "";
+
+  const sm=origin.meta;
+  if(sm){
+    meta.style.left=sm.left+"px";
+    meta.style.right="auto";
+    meta.style.top=sm.top+"px";
+    meta.style.bottom="auto";
+    meta.style.width=sm.width+"px";
+    meta.style.fontSize=sm.fontSize+"px";
+    meta.style.lineHeight=sm.lineHeight+"px";
+    meta.style.fontWeight=sm.fontWeight;
+    meta.style.letterSpacing=sm.letterSpacing;
+    meta.style.fontFamily=sm.fontFamily;
+    meta.style.color=sm.color;
+  }
+
+  ghost.appendChild(meta);
+
+  document.body.appendChild(ghost);
+
+  const smallTitle=origin.title || {
+    left:18,top:14,width:Math.max(80,startRect.width-36),
+    fontSize:16,lineHeight:19,letterSpacing:0,color:"#111"
+  };
+
+  const applySmall=()=>{
+    ghost.style.left=startRect.left+"px";
+    ghost.style.top=startRect.top+"px";
+    ghost.style.width=startRect.width+"px";
+    ghost.style.height=startRect.height+"px";
+    ghost.style.borderRadius="18px";
+    ghost.style.backgroundColor=origin.background || "#dedede";
+
+    title.style.left=smallTitle.left+"px";
+    title.style.top=smallTitle.top+"px";
+    title.style.width=smallTitle.width+"px";
+    title.style.fontSize=smallTitle.fontSize+"px";
+    title.style.lineHeight=smallTitle.lineHeight+"px";
+    title.style.letterSpacing=smallTitle.letterSpacing+"px";
+    title.style.color=smallTitle.color;
+
+    if(origin.meta){
+      meta.style.left=origin.meta.left+"px";
+      meta.style.right="auto";
+      meta.style.top=origin.meta.top+"px";
+      meta.style.bottom="auto";
+      meta.style.width=origin.meta.width+"px";
+      meta.style.fontSize=origin.meta.fontSize+"px";
+      meta.style.lineHeight=origin.meta.lineHeight+"px";
+      meta.style.fontWeight=origin.meta.fontWeight;
+      meta.style.letterSpacing=origin.meta.letterSpacing;
+      meta.style.fontFamily=origin.meta.fontFamily;
+      meta.style.color=origin.meta.color;
+    }
+  };
+
+  const applyLarge=()=>{
+    ghost.style.left=targetRect.left+"px";
+    ghost.style.top=targetRect.top+"px";
+    ghost.style.width=targetRect.width+"px";
+    ghost.style.height=targetRect.height+"px";
+    ghost.style.borderRadius="30px 30px 0 0";
+    ghost.style.backgroundColor="#fff";
+
+    title.style.left="31px";
+    title.style.top="43px";
+    title.style.width=Math.max(80,targetRect.width-62)+"px";
+    title.style.fontSize="31px";
+    title.style.lineHeight="31.93px";
+    title.style.letterSpacing="-1.3px";
+    title.style.color=storyTitleColor(story);
+  };
+
+  if(reverse){
+    ghost.classList.add("closing-morph");
+    applyLarge();
+    meta.style.removeProperty("opacity");
+  }else{
+    applySmall();
+  }
+
+  void ghost.offsetWidth;
+
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    ghost.classList.add("expanding");
+    if(reverse){
+      applySmall();
+      /* L'opacité est gérée par CSS pour un vrai fondu progressif. */
+      meta.style.removeProperty("opacity");
+    }else{
+      applyLarge();
+    }
+  }));
+
+  return ghost;
+}
+
 let pendingLibraryRemoval = null;
 let editingStoryId = null;
 let editingStoryOriginal = null;
@@ -4270,7 +4826,24 @@ function bindExpandedScroll(){
 }
 
 async function openReader(index=current,storyOverride=null){
-  if(!storyOverride)restoreFullStoryText(currentStory());
+  /* Déterminer d'abord la nouvelle demandée, SANS toucher à la carte d'accueil. */
+  const requestedStory=storyOverride || currentStory();
+  if(!requestedStory)return;
+
+  const fromList=
+    storyReturnTarget!=="home" &&
+    listReaderOrigin &&
+    listReaderOrigin.storyId===String(requestedStory.id);
+
+  /* Point crucial : si l'ouverture vient d'un bandeau, on fige immédiatement
+     la carte qui était visible au moment où Bibliothèque / Archives / Recherche
+     a été ouverte. Aucun changement de current, aucun rerender de l'accueil. */
+  if(fromList){
+    createReaderCardPlaceholder();
+  }else{
+    removeReaderCardPlaceholder();
+    restoreFullStoryText(currentStory());
+  }
 
   /* Même référence verticale que Recherche / Bibliothèque / Archives. */
   ensureSharedPanelTop();
@@ -4283,10 +4856,14 @@ async function openReader(index=current,storyOverride=null){
     bindExpandedScroll();
     updateLikeButton();
   }
-  if(index!==current){
+
+  /* Depuis un bandeau, current représente toujours la carte d'accueil figée.
+     On ne le modifie donc JAMAIS. */
+  if(!fromList && index!==current){
     current=index;
     renderCard(false);
   }
+
   const s=currentStory();
   if(!s)return;
 
@@ -4295,16 +4872,11 @@ async function openReader(index=current,storyOverride=null){
   applyReadingStateToActions(s);
 
   const start=card.getBoundingClientRect();
+  const visualStart=fromList ? listReaderOrigin.rect : start;
 
   /* On mémorise les positions VISUELLES exactes du titre et du premier
      paragraphe sur la carte fermée. Elles servent ensuite de référence
      à la lecture, indépendamment du scale responsive de l'accueil. */
-  const titleBefore=card.querySelector(".story-title-single")?.getBoundingClientRect();
-  const firstParagraphBefore=card.querySelector("#storyTextOnly > p")?.getBoundingClientRect();
-
-  const titleTopBefore=titleBefore ? titleBefore.top-start.top : 51;
-  const paragraphTopBefore=firstParagraphBefore ? firstParagraphBefore.top-start.top : null;
-
   const appRect=document.getElementById("app").getBoundingClientRect();
 
   /* La nouvelle s'ouvre exactement au même niveau supérieur que Recherche. */
@@ -4320,61 +4892,95 @@ async function openReader(index=current,storyOverride=null){
   const targetWidth=appRect.width;
   const targetHeight=Math.max(1,window.innerHeight-targetTop);
 
-  /* La carte doit partager le même contexte d'empilement que le voile et les actions. */
+  /* La vraie carte peut maintenant être déplacée dans le lecteur :
+     son état d'accueil est déjà figé par le placeholder. */
   reader.insertBefore(card, readerActions);
   card.classList.add("expanding");
   card.style.transition="none";
-  card.style.left=start.left+"px";
-  card.style.top=start.top+"px";
-  card.style.width=start.width+"px";
-  card.style.height=start.height+"px";
-  card.style.borderRadius="31px";
   card.style.transform="none";
-  card.style.opacity="1";
 
-  /* Géométrie interne : aucune approximation en pixels fixes.
-     Le titre reprend exactement son niveau relatif de la carte fermée. */
-  card.style.setProperty("--reader-content-top",Math.max(0,titleTopBefore)+"px");
+  let listMorph=null;
 
-  const titleNow=card.querySelector(".story-title-single");
-  if(titleNow){
-    /* On mesure d'abord le titre sans espace inférieur, puis on recrée
-       exactement la distance qui séparait le titre du premier paragraphe
-       sur la carte. Cela supprime le saut même pour un titre d'une ligne. */
-    card.style.setProperty("--reader-title-gap","0px");
-
-    const titleHeightNow=titleNow.getBoundingClientRect().height;
-    if(paragraphTopBefore!==null){
-      const wantedGap=Math.max(
-        0,
-        paragraphTopBefore-titleTopBefore-titleHeightNow
-      );
-      card.style.setProperty("--reader-title-gap",wantedGap+"px");
-    }else{
-      card.style.setProperty("--reader-title-gap","25px");
-    }
-  }
-
-  document.getElementById("app").classList.add("reading");
-  reader.classList.remove("closing");
-  reader.classList.add("open");
-
-  requestAnimationFrame(()=>requestAnimationFrame(()=>{
-    card.style.transition=
-      "left .42s cubic-bezier(.2,.82,.2,1),"+
-      "top .42s cubic-bezier(.2,.82,.2,1),"+
-      "width .42s cubic-bezier(.2,.82,.2,1),"+
-      "height .42s cubic-bezier(.2,.82,.2,1),"+
-      "border-radius .42s ease";
+  if(fromList){
+    /* Le vrai lecteur est placé directement à sa géométrie finale,
+       mais reste invisible. Le seul élément qui grandit est le bandeau cloné. */
+    card.classList.add("reader-awaiting-morph");
     card.style.left=targetLeft+"px";
     card.style.top=targetTop+"px";
     card.style.width=targetWidth+"px";
     card.style.height=targetHeight+"px";
     card.style.borderRadius="30px 30px 0 0";
+    card.style.opacity="0";
+
+    listMorph=createListMorph(
+      s,
+      visualStart,
+      {left:targetLeft,top:targetTop,width:targetWidth,height:targetHeight},
+      false
+    );
+  }else{
+    card.style.left=start.left+"px";
+    card.style.top=start.top+"px";
+    card.style.width=start.width+"px";
+    card.style.height=start.height+"px";
+    card.style.borderRadius="31px";
+    card.style.opacity="1";
+  }
+
+  /* Géométrie de lecture volontairement fixe : le titre démarre toujours
+     à 51 px et réserve deux lignes, donc le texte commence au même niveau
+     pour toutes les nouvelles. */
+  card.style.removeProperty("--reader-content-top");
+  card.style.removeProperty("--reader-title-gap");
+
+  document.getElementById("app").classList.add("reading");
+  reader.classList.remove("closing","list-backdrop-fixed","list-backdrop-handoff");
+  if(fromList)reader.classList.add("list-backdrop-handoff");
+  reader.classList.add("open");
+
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    if(!fromList){
+      card.style.transition=
+        "left .42s cubic-bezier(.2,.82,.2,1),"+
+        "top .42s cubic-bezier(.2,.82,.2,1),"+
+        "width .42s cubic-bezier(.2,.82,.2,1),"+
+        "height .42s cubic-bezier(.2,.82,.2,1),"+
+        "border-radius .42s ease";
+      card.style.left=targetLeft+"px";
+      card.style.top=targetTop+"px";
+      card.style.width=targetWidth+"px";
+      card.style.height=targetHeight+"px";
+      card.style.borderRadius="30px 30px 0 0";
+    }
 
     setTimeout(()=>{
+      if(fromList){
+        /* Le clone a maintenant exactement la forme du lecteur.
+           On masque la fenêtre source et on échange clone / vrai lecteur
+           sur une seule frame : aucun deuxième écran n'est visible. */
+        const modal=originModal();
+
+        /* Handoff du voile gris dans une seule frame :
+           modal .22 -> reader .22, jamais les deux en même temps. */
+        reader.classList.add("list-backdrop-fixed");
+        if(modal)modal.style.visibility="hidden";
+        reader.classList.remove("list-backdrop-handoff");
+
+        card.classList.remove("reader-awaiting-morph");
+        card.style.opacity="1";
+
+        /* Le vrai lecteur est peint sous le ghost pendant une frame complète.
+           On ne retire le ghost qu'après cette peinture, ce qui supprime
+           le saut perceptible du titre à la fin du morphing. */
+        requestAnimationFrame(()=>requestAnimationFrame(()=>{
+          listMorph?.remove();
+          reader.classList.remove("list-backdrop-fixed");
+        }));
+      }
+
       card.classList.remove("expanding");
       card.classList.add("expanded");
+
       const sc=card.querySelector("#storyScrollSingle");
       if(sc){
         sc.scrollTop=0;
@@ -4386,7 +4992,7 @@ async function openReader(index=current,storyOverride=null){
           setTimeout(()=>goToManualBookmark(s),230);
         }
       }
-    },420);
+    },605);
   }));
 
   /* Les commentaires sont désormais chargés uniquement dans la fenêtre Commentaires. */
@@ -4436,7 +5042,84 @@ function closeReader(){
   document.getElementById("bookmarkCloseModal").classList.add("open");
 }
 
+
+function finalizeCloseReaderToList(){
+  const s=currentStory();
+  if(!s || !listReaderOrigin){
+    finalizeCloseReaderHome();
+    return;
+  }
+
+  const modal=originModal();
+  const source=listReaderOrigin.element;
+  const originRect=listReaderOrigin.rect;
+  const currentRect=card.getBoundingClientRect();
+
+  /* Handoff inverse du voile gris : le lecteur coupe son voile exactement
+     au moment où la modale source reprend le sien. */
+  if(source)source.classList.add("morph-source-row");
+  reader.classList.add("list-backdrop-handoff");
+  if(modal){
+    modal.style.visibility="";
+    modal.classList.add("open");
+  }
+
+  /* Le clone part de la feuille blanche actuelle. */
+  const ghost=createListMorph(s,originRect,currentRect,true);
+
+  /* Le vrai lecteur disparaît sous son clone exact. */
+  card.classList.add("reader-awaiting-morph");
+  card.style.opacity="0";
+  reader.classList.add("closing");
+
+  setTimeout(()=>{
+    /* Le vrai bandeau reprend progressivement la main pendant que
+       le clone s'efface. Les deux ont désormais exactement la même
+       typographie : aucune saute de graisse, taille ou hauteur. */
+    if(source)source.classList.remove("morph-source-row");
+    if(ghost)ghost.classList.add("morph-meta-handoff");
+  },285);
+
+  setTimeout(()=>{
+    ghost?.remove();
+
+    readerStoryOverride=null;
+    reader.classList.remove("open","closing","list-backdrop-handoff","list-backdrop-fixed");
+    document.getElementById("app").classList.remove("reading");
+
+    /* current n'a jamais changé : renderCard restaure donc exactement
+       la carte qui était visible avant l'ouverture de la liste. */
+    deck.appendChild(card);
+    card.classList.remove("expanded","expanding","collapsing","reader-awaiting-morph");
+    card.removeAttribute("style");
+    renderCard(false);
+
+    /* La vraie carte est maintenant reconstruite sous le placeholder.
+       On retire le clone seulement après une frame de peinture, ce qui
+       empêche tout flash ou disparition/reapparition de la carte centrale. */
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{
+      removeReaderCardPlaceholder();
+    }));
+
+    clearListReaderOrigin();
+    storyReturnTarget="home";
+  },425);
+}
+
 function finalizeCloseReader(){
+  const useListMorph=
+    storyReturnTarget!=="home" &&
+    listReaderOrigin &&
+    listReaderOrigin.storyId===String(currentStory()?.id);
+
+  if(useListMorph){
+    finalizeCloseReaderToList();
+  }else{
+    finalizeCloseReaderHome();
+  }
+}
+
+function finalizeCloseReaderHome(){
   if(!card.classList.contains("expanded") && !card.classList.contains("expanding"))return;
 
   const deckRect=deck.getBoundingClientRect();
@@ -4503,6 +5186,8 @@ function finalizeCloseReader(){
       void modal.offsetHeight;
       requestAnimationFrame(()=>modal.classList.add("open"));
     }
+    removeReaderCardPlaceholder();
+    clearListReaderOrigin();
     storyReturnTarget="home";
   },405);
 }
@@ -4603,6 +5288,7 @@ card.addEventListener("click",e=>{
   if(card.classList.contains("expanded")||card.classList.contains("expanding")||card.classList.contains("collapsing"))return;
   if(suppressClick||e.target.closest("button"))return;
   storyReturnTarget="home";
+  clearListReaderOrigin();
   openReader();
 });
 
@@ -4824,8 +5510,8 @@ function renderLibrary(){
     const idx=STORIES.findIndex(s=>String(s.id)===String(btn.dataset.storyId));
     if(idx<0)return;
     storyReturnTarget="library";
-    const lib=document.getElementById("libraryModal");
-    lib.style.visibility="hidden";
+    rememberListReaderOrigin(btn,STORIES[idx]);
+    btn.classList.add("morph-source-row");
     openReader(idx,STORIES[idx]);
   }));
 
@@ -4880,8 +5566,8 @@ function renderDismissed(){
     const s=storyById(btn.dataset.dismissedStoryId);
     if(!s)return;
     storyReturnTarget="dismissed";
-    const modal=document.getElementById("dismissedModal");
-    modal.style.visibility="hidden";
+    rememberListReaderOrigin(btn,s);
+    btn.classList.add("morph-source-row");
     const idx=STORIES.findIndex(x=>String(x.id)===String(s.id));
     openReader(idx,s);
   }));
@@ -4956,8 +5642,8 @@ function renderSearchResults(query){
     const s=storyById(row.dataset.searchStoryId);
     if(!s)return;
     storyReturnTarget="search";
-    const modal=document.getElementById("searchModal");
-    modal.style.visibility="hidden";
+    rememberListReaderOrigin(row,s);
+    row.classList.add("morph-source-row");
     const idx=STORIES.findIndex(x=>String(x.id)===String(s.id));
     openReader(idx,STORIES[idx]);
   }));
