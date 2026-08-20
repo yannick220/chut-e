@@ -3820,14 +3820,45 @@ async function loadLikeSummaries(){
 
 async function loadCommentSummaries(){
   commentCounts=new Map();
-  const {data,error}=await sb.from("comments").select("story_id");
-  if(error){
-    console.error("Chargement compteurs commentaires :",error);
+
+  /* On compte exactement les messages que l'interface sait afficher :
+     - tous les commentaires principaux ;
+     - toutes leurs réponses.
+     Une ancienne réponse devenue orpheline (parent supprimé/inexistant)
+     ne doit pas gonfler le compteur alors qu'elle n'apparaît pas à l'écran. */
+  let res=await sb.from("comments").select("id,story_id,parent_id");
+
+  if(res.error){
+    /* Ancien schéma sans réponses : chaque ligne est un commentaire visible. */
+    res=await sb.from("comments").select("id,story_id");
+    if(res.error){
+      console.error("Chargement compteurs commentaires :",res.error);
+      return;
+    }
+    for(const row of (res.data||[])){
+      const sid=String(row.story_id);
+      commentCounts.set(sid,(commentCounts.get(sid)||0)+1);
+    }
     return;
   }
-  for(const row of (data||[])){
-    const id=String(row.story_id);
-    commentCounts.set(id,(commentCounts.get(id)||0)+1);
+
+  const rows=res.data||[];
+  const idsByStory=new Map();
+
+  for(const row of rows){
+    const sid=String(row.story_id);
+    if(!idsByStory.has(sid)) idsByStory.set(sid,new Set());
+    idsByStory.get(sid).add(String(row.id));
+  }
+
+  for(const row of rows){
+    const sid=String(row.story_id);
+    const isParent=row.parent_id==null;
+    const parentExists=!isParent && idsByStory.get(sid)?.has(String(row.parent_id));
+
+    if(isParent || parentExists){
+      commentCounts.set(sid,(commentCounts.get(sid)||0)+1);
+    }
   }
 }
 
@@ -4611,6 +4642,16 @@ async function renderCommentsForCurrent(){
   const parents=commentsSupportReplies ? rows.filter(r=>!r.parent_id) : rows;
   const replies=commentsSupportReplies ? rows.filter(r=>r.parent_id) : [];
 
+  /* Source de vérité locale : ce qui est effectivement affichable dans ce fil. */
+  if(commentsSupportReplies){
+    const parentIds=new Set(parents.map(r=>String(r.id)));
+    const visibleCount=parents.length + replies.filter(r=>parentIds.has(String(r.parent_id))).length;
+    commentCounts.set(String(s.id),visibleCount);
+  }else{
+    commentCounts.set(String(s.id),rows.length);
+  }
+  updateInteractionCounters();
+
   if(!parents.length){
     list.innerHTML=`<div class="no-comments">Il n’y a pas encore de commentaire pour cette nouvelle.</div>`;
     return;
@@ -4674,6 +4715,16 @@ async function renderCommentsInModal(){
 
   const parents=commentsSupportReplies ? rows.filter(r=>!r.parent_id) : rows;
   const replies=commentsSupportReplies ? rows.filter(r=>r.parent_id) : [];
+
+  /* Source de vérité locale : ce qui est effectivement affichable dans ce fil. */
+  if(commentsSupportReplies){
+    const parentIds=new Set(parents.map(r=>String(r.id)));
+    const visibleCount=parents.length + replies.filter(r=>parentIds.has(String(r.parent_id))).length;
+    commentCounts.set(String(s.id),visibleCount);
+  }else{
+    commentCounts.set(String(s.id),rows.length);
+  }
+  updateInteractionCounters();
 
   if(!parents.length){
     list.innerHTML=`<div class="no-comments">Il n’y a pas encore de commentaire pour cette nouvelle.</div>`;
