@@ -3411,6 +3411,370 @@ html, body{
     opacity .14s linear !important;
 }
 
+
+/* ===== V85 — compatibilité iPhone / Safari ===== */
+
+/* Fallback classique avant les unités dynamiques récentes. */
+html,body{
+  min-height:100%;
+}
+.app{
+  height:100vh;
+  height:var(--chute-viewport-height, 100dvh) !important;
+  min-height:100vh;
+}
+
+/* Safari iOS : la hauteur est fournie en pixels par visualViewport.
+   Cela évite qu'un calcul 100dvh/100svh incohérent écrase la zone du deck. */
+.ios-safari .app{
+  height:var(--chute-viewport-height, 100vh) !important;
+  min-height:var(--chute-viewport-height, 100vh) !important;
+}
+
+/* Si Safari ne sait pas gérer correctement l'unité svh dans les panneaux,
+   on s'appuie sur la même hauteur réelle. */
+.ios-safari .modal{
+  height:var(--chute-viewport-height, 100vh) !important;
+}
+
+/* Filet de sécurité : le paquet de cartes ne peut jamais devenir invisible
+   à cause d'une zone centrale calculée à zéro ou négative. */
+.ios-safari .deck{
+  min-height:380px;
+}
+
+
+/* ===== V86 — Bibliothèque / Archives : hauteur naturelle, ancrées en bas =====
+   Règle :
+   - peu de bandeaux : la fenêtre reste collée au bas et monte seulement
+     de la hauteur réellement nécessaire ;
+   - beaucoup de bandeaux : elle monte jusqu'à la limite supérieure commune ;
+   - AUCUN bandeau n'est coupé tant que cette limite supérieure n'est pas atteinte.
+*/
+
+#libraryModal .modal-panel,
+#dismissedModal .modal-panel{
+  position:absolute !important;
+  left:50% !important;
+  right:auto !important;
+
+  /* La fenêtre est toujours ancrée au bord inférieur. */
+  bottom:0 !important;
+  top:auto !important;
+
+  width:min(100%,430px) !important;
+  height:auto !important;
+
+  /* Elle ne devient scrollable qu'une fois arrivée à la limite haute. */
+  max-height:calc(var(--chute-viewport-height, 100dvh) - var(--search-panel-top,300px)) !important;
+
+  transform:translateX(-50%) translateY(100%) !important;
+
+  display:flex !important;
+  flex-direction:column !important;
+  overflow:hidden !important;
+}
+
+#libraryModal.open .modal-panel,
+#dismissedModal.open .modal-panel{
+  transform:translateX(-50%) translateY(0) !important;
+}
+
+#libraryModal.closing .modal-panel,
+#dismissedModal.closing .modal-panel{
+  transform:translateX(-50%) translateY(100%) !important;
+}
+
+/* Le titre garde sa hauteur naturelle. */
+#libraryModal .modal-head,
+#dismissedModal .modal-head{
+  flex:0 0 auto !important;
+}
+
+/* IMPORTANT :
+   on supprime le max-height propre aux listes qui pouvait couper un bandeau
+   alors que la fenêtre avait encore de la place pour monter. */
+#libraryList,
+#dismissedList{
+  flex:1 1 auto !important;
+  min-height:0 !important;
+  max-height:none !important;
+  height:auto !important;
+
+  overflow-y:auto !important;
+  overflow-x:hidden !important;
+  overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
+}
+
+/* Tant que tout le contenu tient dans la hauteur disponible,
+   aucun scroll interne n'est nécessaire et aucun bandeau n'est tronqué. */
+#libraryList:not(:has(.library-row-wrap)),
+#dismissedList:not(:has(.library-row-wrap)){
+  overflow-y:visible !important;
+}
+
+/* Neutralisation explicite de l'ancien breakpoint qui forçait top:. */
+@media (max-height:700px){
+  #libraryModal .modal-panel,
+  #dismissedModal .modal-panel{
+    top:auto !important;
+    bottom:0 !important;
+    max-height:calc(var(--chute-viewport-height, 100vh) - var(--search-panel-top,220px)) !important;
+  }
+}
+
+
+/* ===== V87 — limite haute réellement mesurée avant ouverture ===== */
+
+/* La hauteur maximale est maintenant fondée sur --search-panel-top,
+   recalculé juste avant CHAQUE ouverture de Bibliothèque / Archives. */
+#libraryModal .modal-panel,
+#dismissedModal .modal-panel{
+  max-height:calc(
+    var(--chute-viewport-height, 100dvh) - var(--search-panel-top, 0px)
+  ) !important;
+}
+
+/* La liste occupe naturellement toute sa hauteur tant qu'il reste de la place.
+   Elle ne sert de zone scrollable qu'une fois le max-height du panneau atteint. */
+#libraryList,
+#dismissedList{
+  flex:0 1 auto !important;
+  min-height:0 !important;
+  max-height:none !important;
+  height:auto !important;
+}
+
+/* Si le panneau doit se comprimer parce qu'il a atteint sa limite haute,
+   la liste est alors la seule partie autorisée à rétrécir et à scroller. */
+#libraryModal .modal-panel,
+#dismissedModal .modal-panel{
+  min-height:0 !important;
+}
+
+
+/* ===== V88 — ouverture Bibliothèque / Archives : vraie entrée depuis le bas =====
+   Le panneau est d'abord peint entièrement sous le viewport, avec sa hauteur
+   finale déjà calculée, puis il remonte en bloc au frame suivant. */
+#libraryModal.sheet-preopen,
+#dismissedModal.sheet-preopen{
+  visibility:visible !important;
+}
+
+#libraryModal.sheet-preopen .modal-panel,
+#dismissedModal.sheet-preopen .modal-panel{
+  transform:translateX(-50%) translateY(100%) !important;
+  transition:none !important;
+}
+
+#libraryModal.sheet-animate-in .modal-panel,
+#dismissedModal.sheet-animate-in .modal-panel{
+  transition:transform .38s cubic-bezier(.22,.86,.26,1) !important;
+  transform:translateX(-50%) translateY(0) !important;
+  will-change:transform;
+}
+
+
+
+/* ===== V89 — ouverture/fermeture perceptuellement symétriques =====
+   La fermeture existante utilise une courbe ease-out. Pour que l'ouverture
+   soit son véritable mouvement temporel inverse, elle utilise la courbe
+   de Bézier renversée : (1-x2,1-y2,1-x1,1-y1). Même durée : 340 ms. */
+#libraryModal.sheet-animate-in .modal-panel,
+#dismissedModal.sheet-animate-in .modal-panel{
+  transition:transform .34s cubic-bezier(.8,0,.8,.18) !important;
+  transform:translateX(-50%) translateY(0) !important;
+}
+
+/* La fermeture conserve exactement son mouvement actuel. */
+#libraryModal.closing .modal-panel,
+#dismissedModal.closing .modal-panel{
+  transition:transform .34s cubic-bezier(.2,.82,.2,1) !important;
+  transform:translateX(-50%) translateY(100%) !important;
+}
+
+
+/* ===== V91 — le texte accompagne l'ouverture de la nouvelle =====
+   Le contenu de lecture existe dès le début du morphing et se révèle pendant
+   le déplacement, au lieu d'apparaître lorsque la carte est déjà ouverte. */
+.story-card.reader-content-enter-pre #storyTextOnly{
+  opacity:.18 !important;
+  transform:translateY(10px) !important;
+  transition:none !important;
+}
+.story-card.reader-content-enter #storyTextOnly{
+  opacity:1 !important;
+  transform:translateY(0) !important;
+  transition:
+    opacity .34s ease-out .035s,
+    transform .40s cubic-bezier(.2,.82,.2,1) !important;
+}
+
+/* Les fondus de lecture sont déjà présents pendant le mouvement. */
+.story-card.expanding .expanded-fade-top,
+.story-card.expanding .expanded-fade-bottom{
+  display:block !important;
+  opacity:1 !important;
+}
+
+
+/* ===== V92 — texte réellement solidaire de l'ouverture + départ fixe ===== */
+
+/* 1) Pendant l'ouverture, aucun fondu ni micro-translation propre au texte.
+   Le contenu reste pleinement visible : il se déplace uniquement parce que
+   toute la carte monte et s'agrandit. C'est ce qui donne l'impression que le
+   texte est physiquement emporté par la fenêtre. */
+.story-card.reader-content-enter-pre #storyTextOnly,
+.story-card.reader-content-enter #storyTextOnly,
+.story-card.expanding #storyTextOnly{
+  opacity:1 !important;
+  transform:none !important;
+  transition:none !important;
+}
+
+/* 2) Géométrie verticale identique pour toutes les nouvelles.
+   Le haut du contenu reste à 43 px. Le titre dispose toujours de 64 px,
+   soit deux lignes complètes au maximum. Le corps commence ensuite après
+   un petit intervalle fixe. */
+.story-card.expanding .story-scroll-single,
+.story-card.expanded .story-scroll-single{
+  padding-top:43px !important;
+}
+
+.story-card.expanding .story-title-single,
+.story-card.expanded .story-title-single{
+  height:64px !important;
+  min-height:64px !important;
+  max-height:64px !important;
+  box-sizing:border-box !important;
+  margin:0 !important;
+  padding:0 !important;
+  overflow:visible !important;
+}
+
+.story-card.expanding .story-body-single,
+.story-card.expanded .story-body-single{
+  padding-top:14px !important;
+}
+
+
+/* ===== V94 — texte révélé uniquement par l'agrandissement de la carte =====
+   Le corps existe dès le premier frame. Aucune animation, opacité ou translation
+   indépendante : il est simplement masqué par la carte compacte puis découvert
+   naturellement lorsque la carte s'agrandit. */
+.story-card.expanding .story-body-single,
+.story-card.expanded .story-body-single{
+  transform:none !important;
+  opacity:1 !important;
+  transition:none !important;
+}
+
+/* ===== V95 — correction ciblée du pop du texte =====
+   L'ancienne règle .story-card:not(.expanded) limitait encore le corps à
+   248 px pendant TOUT l'état expanding. Le reste du texte n'était libéré
+   qu'au passage final en .expanded, donc après stabilisation du titre.
+   On supprime uniquement cette limite pendant l'ouverture. */
+.story-card.expanding .story-body-single{
+  max-height:none !important;
+  overflow:visible !important;
+}
+
+/* ===== V96 — le corps du texte appartient au morph bandeau → lecteur =====
+   Correction strictement limitée à l'ouverture depuis Bibliothèque / Archives /
+   Recherche. Le texte est dans le même ghost que le titre et suit exactement
+   les 420 ms du morph. */
+.reader-list-morph-body{
+  position:absolute;
+  margin:0;
+  padding:0;
+  font-family:Montserrat,Arial,sans-serif;
+  font-size:16.5px;
+  line-height:1.40;
+  letter-spacing:-.24px;
+  font-weight:400;
+  color:#111;
+  transform-origin:left top;
+  pointer-events:none;
+  transition:
+    top .42s cubic-bezier(.2,.82,.2,1),
+    transform .42s cubic-bezier(.2,.82,.2,1) !important;
+}
+
+.reader-list-morph-body p{
+  margin:0 0 14px;
+}
+
+.reader-list-morph-body p:last-child{
+  margin-bottom:0;
+}
+
+/* À la fermeture, on n'ajoute aucun corps de texte au ghost :
+   le comportement validé reste donc strictement inchangé. */
+
+/* ===== V97 — Like / commentaire dans le même morph que titre + texte ===== */
+.reader-list-morph-action{
+  position:absolute;
+  width:48px;
+  height:48px;
+  min-width:48px;
+  min-height:48px;
+  border:0;
+  border-radius:50%;
+  padding:13px;
+  box-sizing:border-box;
+  pointer-events:none;
+  transform-origin:center;
+  transition:
+    left .42s cubic-bezier(.2,.82,.2,1),
+    top .42s cubic-bezier(.2,.82,.2,1),
+    transform .42s cubic-bezier(.2,.82,.2,1) !important;
+}
+.reader-list-morph-action svg{
+  width:100%;
+  height:100%;
+  display:block;
+  fill:currentColor;
+}
+
+/* Pendant le morph depuis un bandeau, les vrais boutons ne doivent pas
+   apparaître derrière leurs copies visuelles. */
+.reader-overlay.list-backdrop-handoff .reader-actions{
+  opacity:0 !important;
+  transition:none !important;
+}
+
+/* ===== V98 — boutons : même morph, aucun relais perceptible ===== */
+.reader-list-morph-action{
+  opacity:1 !important;
+  color:#fff !important;
+}
+
+/* Pendant la frame de relais, les vrais boutons sont déjà exactement à leur
+   état final sous le ghost. Aucune transition d'opacité / déplacement. */
+.reader-overlay.actions-handoff-ready .reader-actions{
+  opacity:1 !important;
+  transform:translateY(-48px) !important;
+  transition:none !important;
+  pointer-events:auto !important;
+}
+
+/* ===== V99 — taille des boutons strictement constante pendant le morph ===== */
+.reader-list-morph-action{
+  width:48px !important;
+  height:48px !important;
+  min-width:48px !important;
+  min-height:48px !important;
+  padding:13px !important;
+  box-sizing:border-box !important;
+  transform:scale(1) !important;
+}
+
+/* ===== V100 — aucun décalage au relais final ===== */
+.reader-overlay.actions-handoff-ready .reader-actions{
+  transform:translateY(-48px) !important;
+  transition:none !important;
+}
 </style>
 </head>
 <body>
@@ -3713,6 +4077,77 @@ function createListMorph(story,startRect,targetRect,reverse=false){
   title.textContent=story.title || "";
   ghost.appendChild(title);
 
+  /* V96 : à l'ouverture seulement, le corps de la nouvelle fait partie
+     du même morph que le titre. Il existe donc avant le premier frame. */
+  let body=null;
+  if(!reverse){
+    body=document.createElement("div");
+    body.className="reader-list-morph-body";
+    body.innerHTML=(story.body || [])
+      .map(p=>`<p>${escapeHTML(p).replace(/\n/g,"<br>")}</p>`)
+      .join("");
+    ghost.appendChild(body);
+  }
+
+  /* V97 : copies purement visuelles des deux actions, uniquement à l'ouverture.
+     Elles appartiennent au même ghost que le titre et le corps. */
+  let morphLike=null;
+  let morphComment=null;
+  let finalLikeLocal=null;
+  let finalCommentLocal=null;
+
+  if(!reverse){
+    const realLike=document.getElementById("likeBtn");
+    const realComment=document.getElementById("commentBtn");
+
+    const makeMorphAction=(real,kind)=>{
+      if(!real)return null;
+      const clone=real.cloneNode(true);
+      clone.removeAttribute("id");
+      clone.classList.add("reader-list-morph-action",`reader-list-morph-${kind}`);
+      clone.removeAttribute("aria-label");
+
+      /* Reproduit l'état visuel pertinent sans toucher au vrai bouton. */
+      if(kind==="like"){
+        clone.classList.toggle("liked",likedIds.has(String(story.id)));
+      }
+
+      /* V98 : couleur finale calculée directement depuis l'état de la nouvelle.
+         On ne copie plus l'apparence transitoire du vrai bouton. */
+      const state=readingState(story);
+      const isLiked=(kind==="like" && likedIds.has(String(story.id)));
+      const isEngaged=(kind==="comment" && real.classList.contains("engaged"));
+
+      let soft="#dddddd";
+      let strong="#111111";
+      if(state==="opened"){
+        soft="#ffd09a";
+        strong="#ff8a1f";
+      }else if(state==="read"){
+        soft="#b5d8c1";
+        strong="#2f8458";
+      }
+
+      clone.style.setProperty("background-color",(isLiked || isEngaged) ? strong : soft,"important");
+      clone.style.setProperty("color","#fff","important");
+      clone.style.opacity="1";
+      ghost.appendChild(clone);
+      return clone;
+    };
+
+    morphLike=makeMorphAction(realLike,"like");
+    morphComment=makeMorphAction(realComment,"comment");
+
+    /* Les positions finales sont celles des vrais boutons dans le viewport,
+       converties dans le repère de la future fenêtre. */
+    if(realLike){
+      finalLikeLocal={real:realLike};
+    }
+    if(realComment){
+      finalCommentLocal={real:realComment};
+    }
+  }
+
   const meta=document.createElement("div");
   meta.className="reader-list-morph-meta";
   meta.textContent=origin.metaText || "";
@@ -3757,6 +4192,25 @@ function createListMorph(story,startRect,targetRect,reverse=false){
     title.style.letterSpacing=smallTitle.letterSpacing+"px";
     title.style.color=smallTitle.color;
 
+    if(body){
+      /* Le texte commence juste sous le bord inférieur du bandeau.
+         Le ghost ayant overflow:hidden, il est presque entièrement masqué,
+         puis se découvre immédiatement dès que le bandeau grandit. */
+      body.style.left="31px";
+      body.style.top=Math.max(0,startRect.height-4)+"px";
+      body.style.width=Math.max(80,targetRect.width-62)+"px";
+      body.style.transform="scaleY(.72)";
+    }
+
+    /* Au départ les deux actions sont juste sous le bandeau : le ghost
+       overflow:hidden les masque entièrement. */
+    [morphLike,morphComment].forEach((btn,i)=>{
+      if(!btn)return;
+      btn.style.left=Math.max(0,startRect.width-78)+"px";
+      btn.style.top=(startRect.height + 12 + i*74)+"px";
+      btn.style.transform="scale(1)";
+    });
+
     if(origin.meta){
       meta.style.left=origin.meta.left+"px";
       meta.style.right="auto";
@@ -3787,6 +4241,34 @@ function createListMorph(story,startRect,targetRect,reverse=false){
     title.style.lineHeight="31.93px";
     title.style.letterSpacing="-1.3px";
     title.style.color=storyTitleColor(story);
+
+    if(body){
+      /* Même niveau final que le vrai corps du lecteur :
+         43 px de haut + 64 px réservés au titre + 14 px d'espace. */
+      body.style.left="31px";
+      body.style.top="121px";
+      body.style.width=Math.max(80,targetRect.width-62)+"px";
+      body.style.transform="scaleY(1)";
+    }
+
+    if(morphLike && finalLikeLocal?.real){
+      /* V100 : position finale mesurée directement sur le vrai bouton
+         au moment où le ghost prend sa géométrie large. */
+      const r=finalLikeLocal.real.getBoundingClientRect();
+      morphLike.style.left=(r.left-targetRect.left)+"px";
+      morphLike.style.top=(r.top-targetRect.top)+"px";
+      morphLike.style.width=r.width+"px";
+      morphLike.style.height=r.height+"px";
+      morphLike.style.transform="scale(1)";
+    }
+    if(morphComment && finalCommentLocal?.real){
+      const r=finalCommentLocal.real.getBoundingClientRect();
+      morphComment.style.left=(r.left-targetRect.left)+"px";
+      morphComment.style.top=(r.top-targetRect.top)+"px";
+      morphComment.style.width=r.width+"px";
+      morphComment.style.height=r.height+"px";
+      morphComment.style.transform="scale(1)";
+    }
   };
 
   if(reverse){
@@ -4345,8 +4827,14 @@ async function loadStories(preferredId=null){
   }
   if(current >= homeStories().length) current=0;
 
-  await Promise.all([loadLikeSummaries(),loadCommentSummaries()]);
+  /* V90 — la carte d'accueil ne doit pas attendre les compteurs réseau.
+     Le texte est peint immédiatement dès que les nouvelles sont reçues. */
   renderCard(false);
+  ensureHomeCardVisible();
+
+  /* Likes/commentaires se chargent ensuite sans bloquer l'affichage du texte. */
+  await Promise.all([loadLikeSummaries(),loadCommentSummaries()]);
+  updateInteractionCounters();
   renderLibrary();
   renderDismissed();
   renderSearchResults(searchInputEl?.value || "");
@@ -4895,6 +5383,13 @@ async function openReader(index=current,storyOverride=null){
   /* La vraie carte peut maintenant être déplacée dans le lecteur :
      son état d'accueil est déjà figé par le placeholder. */
   reader.insertBefore(card, readerActions);
+
+  /* Le texte est déjà prêt avant le premier frame de l'ouverture. */
+  card.classList.remove("reader-content-enter");
+  card.classList.add("reader-content-enter-pre");
+
+  /* V94 : le texte est déjà présent avant le premier frame.
+     Il n'a aucune animation propre : seule la carte s'agrandit et le révèle. */
   card.classList.add("expanding");
   card.style.transition="none";
   card.style.transform="none";
@@ -4939,6 +5434,11 @@ async function openReader(index=current,storyOverride=null){
   reader.classList.add("open");
 
   requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    /* Le texte ne change pas d'état ici : il était déjà visible avant
+       le démarrage du morphing. La carte seule poursuit son agrandissement. */
+    card.classList.remove("reader-content-enter-pre");
+    card.classList.add("reader-content-enter");
+
     if(!fromList){
       card.style.transition=
         "left .42s cubic-bezier(.2,.82,.2,1),"+
@@ -4964,22 +5464,30 @@ async function openReader(index=current,storyOverride=null){
            modal .22 -> reader .22, jamais les deux en même temps. */
         reader.classList.add("list-backdrop-fixed");
         if(modal)modal.style.visibility="hidden";
+
+        /* V98 : les vrais boutons sont rendus à leur état final pendant que
+           le ghost est ENCORE présent au-dessus. Le relais se fait donc entre
+           deux images identiques, sans disparition ni réapparition. */
+        reader.classList.add("actions-handoff-ready");
         reader.classList.remove("list-backdrop-handoff");
 
         card.classList.remove("reader-awaiting-morph");
         card.style.opacity="1";
 
-        /* Le vrai lecteur est peint sous le ghost pendant une frame complète.
-           On ne retire le ghost qu'après cette peinture, ce qui supprime
-           le saut perceptible du titre à la fin du morphing. */
+        /* Le vrai lecteur et ses boutons sont peints sous le ghost pendant
+           une frame complète. Puis seul le ghost disparaît. */
         requestAnimationFrame(()=>requestAnimationFrame(()=>{
           listMorph?.remove();
           reader.classList.remove("list-backdrop-fixed");
+          requestAnimationFrame(()=>{
+            reader.classList.remove("actions-handoff-ready");
+          });
         }));
       }
 
-      card.classList.remove("expanding");
+      card.classList.remove("expanding","reader-content-enter-pre");
       card.classList.add("expanded");
+      setTimeout(()=>card.classList.remove("reader-content-enter"),60);
 
       const sc=card.querySelector("#storyScrollSingle");
       if(sc){
@@ -5523,9 +6031,47 @@ function renderLibrary(){
     document.getElementById("removeLibraryModal").classList.add("open");
   }));
 }
+
+
+/* ===== V88 — déclenchement d'ouverture sur deux frames distinctes ===== */
+function openBottomSheetFromBelow(modalId, renderFn){
+  const modal=document.getElementById(modalId);
+  if(!modal)return;
+
+  /* 1. Géométrie finale déterminée avant toute animation. */
+  setSearchPanelTopFromCards();
+  renderFn();
+
+  modal.classList.remove("closing","open","sheet-animate-in");
+  modal.classList.add("sheet-preopen");
+
+  /* Force le navigateur à peindre/calculer l'état entièrement hors écran. */
+  void modal.offsetHeight;
+  const panel=modal.querySelector(".modal-panel");
+  if(panel) void panel.getBoundingClientRect().height;
+
+  /* 2. Le voile devient actif, mais la feuille reste encore sous l'écran. */
+  modal.classList.add("open");
+  void modal.offsetHeight;
+
+  /* 3. Au frame suivant seulement, la feuille remonte en bloc. */
+  requestAnimationFrame(()=>{
+    requestAnimationFrame(()=>{
+      modal.classList.remove("sheet-preopen");
+      modal.classList.add("sheet-animate-in");
+
+      const cleanup=()=>{
+        modal.classList.remove("sheet-animate-in");
+        panel?.removeEventListener("transitionend",cleanup);
+      };
+      panel?.addEventListener("transitionend",cleanup,{once:true});
+      setTimeout(cleanup,520);
+    });
+  });
+}
+
 document.getElementById("libraryBtn").addEventListener("click",()=>{
-  renderLibrary();
-  document.getElementById("libraryModal").classList.add("open");
+  openBottomSheetFromBelow("libraryModal",renderLibrary);
 });
 document.getElementById("cancelRemoveLibrary").addEventListener("click",()=>{
   pendingLibraryRemoval=null;
@@ -5598,8 +6144,7 @@ document.getElementById("confirmRestoreArchive").addEventListener("click",()=>{
 });
 
 document.getElementById("dismissedBtn").addEventListener("click",()=>{
-  renderDismissed();
-  document.getElementById("dismissedModal").classList.add("open");
+  openBottomSheetFromBelow("dismissedModal",renderDismissed);
 });
 
 /* -------------------- SEARCH -------------------- */
@@ -5983,12 +6528,74 @@ readerBackdrop.addEventListener("click",()=>{
   if(reader.classList.contains("open"))closeReader();
 });
 
+
+/* ===== V85 — garde-fou Safari/iPhone ===== */
+(function(){
+  const ua=navigator.userAgent || "";
+  const isIOS=/iPad|iPhone|iPod/.test(ua) ||
+    (navigator.platform==="MacIntel" && navigator.maxTouchPoints>1);
+
+  if(!isIOS)return;
+
+  document.documentElement.classList.add("ios-safari");
+
+  function syncIOSViewport(){
+    const vv=window.visualViewport;
+    const h=Math.round(vv?.height || window.innerHeight || document.documentElement.clientHeight || 0);
+    if(h>0){
+      document.documentElement.style.setProperty("--chute-viewport-height",h+"px");
+    }
+  }
+
+  syncIOSViewport();
+  window.addEventListener("resize",syncIOSViewport,{passive:true});
+  window.addEventListener("orientationchange",()=>{
+    setTimeout(syncIOSViewport,60);
+    setTimeout(syncIOSViewport,260);
+  },{passive:true});
+  window.visualViewport?.addEventListener("resize",syncIOSViewport,{passive:true});
+})();
+
+function ensureHomeCardVisible(){
+  const pool=homeStories();
+  if(!pool.length)return;
+
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    const r=card.getBoundingClientRect();
+    const vh=Math.round(window.visualViewport?.height || window.innerHeight || 0);
+
+    const invisible=
+      !r.width ||
+      !r.height ||
+      r.bottom < 120 ||
+      r.top > vh-100 ||
+      r.height < 200;
+
+    if(!invisible)return;
+
+    /* Fallback uniquement si le moteur responsive a produit une géométrie
+       manifestement impossible. Android et les iPhone déjà corrects ne
+       passent jamais ici. */
+    const app=document.getElementById("app");
+    app.style.setProperty("--home-card-scale",".88");
+    app.style.setProperty("--responsive-deck-top","118px");
+    app.style.setProperty("--responsive-deck-bottom","118px");
+
+    card.style.opacity="1";
+    backLeft.style.opacity="1";
+    backRight.style.opacity="1";
+  }));
+}
+
 /* -------------------- INIT -------------------- */
 async function init(){
   document.getElementById("commentAuthor").value=localStorage.getItem("chute_comment_name")||"";
   updateCount();
   await loadStories();
   renderSearchResults("");
+  ensureHomeCardVisible();
+  setTimeout(ensureHomeCardVisible,120);
+  setTimeout(ensureHomeCardVisible,500);
 }
 init();
 
