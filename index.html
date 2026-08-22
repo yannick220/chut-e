@@ -3775,6 +3775,24 @@ html,body{
   transform:translateY(-48px) !important;
   transition:none !important;
 }
+
+
+/* ===== V101 — fin de lecture au-dessus du bouton Like ===== */
+.story-card.expanded .story-scroll-single{
+  padding-bottom:var(--reader-end-space, 128px) !important;
+}
+
+/* ===== V102 — écran admin parent réellement conservé sous le tertiaire ===== */
+.modal.admin-underlay{
+  pointer-events:none !important;
+}
+
+/* V103 — le parent conserve STRICTEMENT sa géométrie normale de .modal.open.
+   Surtout aucun translateX : les écrans admin sont déjà centrés par le flex
+   de .modal, contrairement à Recherche. On bloque uniquement les interactions. */
+.modal.admin-underlay .modal-panel{
+  transition:none !important;
+}
 </style>
 </head>
 <body>
@@ -3958,7 +3976,8 @@ html,body{
 
 <div class="toast" id="toast"></div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2">requestAnimationFrame(updateReaderEndSpace);
+</script>
 <script>
 /* =========================================================
    CHUT.E — interface Tinder + Supabase
@@ -4298,6 +4317,8 @@ function createListMorph(story,startRect,targetRect,reverse=false){
 let pendingLibraryRemoval = null;
 let editingStoryId = null;
 let editingStoryOriginal = null;
+let adminStoryDraftBaseline = null;
+let adminReturnStack = [];
 let deleteStorySource = "editor";
 let commentsSupportReplies = true;
 let readerStoryOverride = null;
@@ -6258,6 +6279,63 @@ document.getElementById("searchBtn").addEventListener("click",()=>{
 searchInputEl.addEventListener("input",()=>renderSearchResults(searchInputEl.value));
 searchInputEl.addEventListener("search",()=>renderSearchResults(searchInputEl.value));
 
+
+/* ===== V101 — marge de fin de lecture calculée sur le vrai bouton Like ===== */
+function updateReaderEndSpace(){
+  const like=document.getElementById("likeBtn");
+  const scroll=card?.querySelector?.(".story-scroll-single");
+  if(!like||!scroll)return;
+  const r=like.getBoundingClientRect();
+  const vh=window.visualViewport?.height || window.innerHeight;
+  /* À la butée basse, la dernière ligne peut arriver ~14 px au-dessus
+     du bord supérieur du bouton Like. */
+  const space=Math.max(128,Math.round(vh-r.top+14));
+  card.style.setProperty("--reader-end-space",space+"px");
+}
+window.addEventListener("resize",()=>requestAnimationFrame(updateReaderEndSpace),{passive:true});
+if(window.visualViewport){
+  visualViewport.addEventListener("resize",()=>requestAnimationFrame(updateReaderEndSpace),{passive:true});
+}
+
+/* ===== V101 — navigation des sous-fenêtres Administration ===== */
+function adminStoryCurrentValues(){
+  return {
+    date:document.getElementById("adminDateInput").value||todayISO(),
+    title:document.getElementById("adminTitleInput").value,
+    text:document.getElementById("adminBodyInput").value
+  };
+}
+function adminStoryHasUnsavedChanges(){
+  if(!adminStoryDraftBaseline)return false;
+  const now=adminStoryCurrentValues();
+  return now.date!==adminStoryDraftBaseline.date ||
+         now.title!==adminStoryDraftBaseline.title ||
+         now.text!==adminStoryDraftBaseline.text;
+}
+function openAdminChild(parentId,childId){
+  /* V102 : le parent reste réellement ouvert sous l'écran tertiaire.
+     On ne le ferme plus et on ne le rouvrira donc jamais au retour. */
+  adminReturnStack.push(parentId);
+  const parent=document.getElementById(parentId);
+  const child=document.getElementById(childId);
+  if(!parent||!child)return;
+
+  parent.classList.add("admin-underlay");
+  child.classList.remove("closing");
+  child.classList.add("open");
+}
+
+async function returnFromAdminModal(modalId){
+  const parentId=adminReturnStack.pop()||null;
+  if(parentId==="adminStoriesModal") await renderAdminStories();
+
+  const parent=parentId ? document.getElementById(parentId) : null;
+  closeModalAnimated(modalId,()=>{
+    /* Le parent n'est pas rouvert : il était resté ouvert tout le temps. */
+    parent?.classList.remove("admin-underlay");
+  });
+}
+
 /* -------------------- MODALS -------------------- */
 function closeModalAnimated(modalOrId,callback){
   const modal=typeof modalOrId==="string"?document.getElementById(modalOrId):modalOrId;
@@ -6294,9 +6372,26 @@ document.getElementById("saveBookmarkAndClose").addEventListener("click",()=>{
   });
 });
 
-document.querySelectorAll(".modal").forEach(m=>m.addEventListener("click",e=>{
+document.querySelectorAll(".modal").forEach(m=>m.addEventListener("click",async e=>{
   if(e.target!==m)return;
   if(m.id==="bookmarkCloseModal")return;
+
+  /* Administration : un tap extérieur revient d'un niveau au lieu de
+     fermer tout le volet. Dans l'éditeur, on protège les modifications. */
+  if(m.id==="adminStoryModal"){
+    if(adminStoryHasUnsavedChanges()){
+      const leave=confirm("Des modifications n’ont pas été enregistrées. Fermer sans les enregistrer ?");
+      if(!leave)return;
+    }
+    adminStoryDraftBaseline=null;
+    await returnFromAdminModal("adminStoryModal");
+    return;
+  }
+  if(m.id==="adminStoriesModal" || m.id==="adminCommentsModal"){
+    await returnFromAdminModal(m.id);
+    return;
+  }
+
   closeModalAnimated(m);
 }));
 
@@ -6347,12 +6442,13 @@ async function renderAdminStories(){
     if(!s)return;
     editingStoryId=String(s.id);
     editingStoryOriginal={date:s.date||todayISO(),title:s.title,text:s.text};
+    adminStoryDraftBaseline={...editingStoryOriginal};
     document.getElementById("adminStoryTitle").textContent="Modifier la nouvelle";
     document.getElementById("adminDateInput").value=editingStoryOriginal.date;
     document.getElementById("adminTitleInput").value=editingStoryOriginal.title;
     document.getElementById("adminBodyInput").value=editingStoryOriginal.text;
     document.getElementById("adminResetStory").style.display="grid";
-    closeModalAnimated("adminStoriesModal",()=>document.getElementById("adminStoryModal").classList.add("open"));
+    openAdminChild("adminStoriesModal","adminStoryModal");
   }));
 
   box.querySelectorAll("[data-delete-story-list]").forEach(btn=>btn.addEventListener("click",e=>{
@@ -6399,16 +6495,17 @@ document.getElementById("adminAddStory").addEventListener("click",()=>{
   document.getElementById("adminDateInput").value=todayISO();
   document.getElementById("adminTitleInput").value="";
   document.getElementById("adminBodyInput").value="";
+  adminStoryDraftBaseline={date:todayISO(),title:"",text:""};
   document.getElementById("adminResetStory").style.display="none";
-  closeModalAnimated("adminModal",()=>document.getElementById("adminStoryModal").classList.add("open"));
+  openAdminChild("adminModal","adminStoryModal");
 });
 document.getElementById("adminEditStories").addEventListener("click",async()=>{
   await renderAdminStories();
-  closeModalAnimated("adminModal",()=>document.getElementById("adminStoriesModal").classList.add("open"));
+  openAdminChild("adminModal","adminStoriesModal");
 });
 document.getElementById("adminManageComments").addEventListener("click",async()=>{
   await renderAdminComments();
-  closeModalAnimated("adminModal",()=>document.getElementById("adminCommentsModal").classList.add("open"));
+  openAdminChild("adminModal","adminCommentsModal");
 });
 document.getElementById("adminResetStory").addEventListener("click",()=>{
   if(!editingStoryId||!editingStoryOriginal)return;
@@ -6463,7 +6560,10 @@ document.getElementById("confirmDeleteStory").addEventListener("click",async()=>
   closeModalAnimated("deleteStoryModal");
   await loadStories();
   if(source==="list") await renderAdminStories();
-  else closeModalAnimated("adminStoryModal");
+  else {
+    adminStoryDraftBaseline=null;
+    await returnFromAdminModal("adminStoryModal");
+  }
   toast("Nouvelle supprimée");
 });
 
@@ -6487,11 +6587,12 @@ document.getElementById("adminSaveStory").addEventListener("click",async()=>{
   }
   if(error){ console.error(error); toast("Enregistrement impossible"); return; }
 
-  closeModalAnimated("adminStoryModal");
+  adminStoryDraftBaseline=null;
   editingStoryId=null;
   editingStoryOriginal=null;
   document.getElementById("adminResetStory").style.display="none";
   await loadStories(savedId);
+  await returnFromAdminModal("adminStoryModal");
   toast("Enregistré");
 });
 
